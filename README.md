@@ -87,6 +87,34 @@ roots := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Null
 children := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Some("office")}
 ```
 
+## Directory discovery
+
+Package `directory` searches candidate Services through the canonical production directory or its
+fixed sandbox environment. It validates cached Service summaries, follows opaque same-origin
+continuations, exposes structured facets, and provides keyword suggestions.
+
+```go
+directoryClient, err := directory.New(directory.Options{})
+if err != nil {
+	return err
+}
+
+for candidate, err := range directoryClient.SearchServices(ctx, directory.SearchRequest{
+	Filters: &directory.ServiceFilters{
+		Keywords: []string{"gpu"},
+		Payments: []odp.Protocol{odp.ProtocolMPP},
+	},
+}, directory.IterationOptions{MaxItems: 20}) {
+	if err != nil {
+		return err
+	}
+	inspect(candidate.ServiceOrigin)
+}
+```
+
+See the [directory package guide](./directory/README.md) for page traversal, suggestions, and
+sandbox usage.
+
 ## Service integration
 
 Package `service` implements the ODP HTTP runtime for Go's standard `net/http` stack. Small Services
