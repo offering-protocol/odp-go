@@ -102,7 +102,7 @@ if err != nil {
 for candidate, err := range directoryClient.SearchServices(ctx, directory.SearchRequest{
 	Filters: &directory.ServiceFilters{
 		Keywords: []string{"gpu"},
-		Payments: []odp.Protocol{odp.ProtocolMPP},
+		Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP}},
 	},
 }, directory.IterationOptions{MaxItems: 20}) {
 	if err != nil {

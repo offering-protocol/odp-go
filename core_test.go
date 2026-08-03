@@ -17,7 +17,7 @@ func TestOfferingPreservesAdditiveMembers(t *testing.T) {
 		"name":"A100",
 		"future":{"enabled":true},
 		"price":{"type":"quote","future_price":"negotiable"},
-		"actions":[{"id":"quote","rel":"quote","http":{"href":"/quote","method":"POST"}}]
+		"actions":[{"authentication":"not-required","id":"quote","rel":"quote","http":{"href":"/quote","method":"POST"}}]
 	}`)
 	offering, err := odp.ParseOffering(input)
 	if err != nil {

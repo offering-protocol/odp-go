@@ -24,7 +24,7 @@ func main() {
 		Offerings: []odp.Offering{
 			{
 				Actions: []odp.Action{
-					{Description: "Download the guide", HTTP: &odp.HTTPActionTarget{Href: "/downloads/agent-guide.txt", Method: http.MethodGet}, ID: "download", Rel: odp.ActionDownload},
+					{Authentication: odp.AuthenticationNotRequired, Description: "Download the guide", HTTP: &odp.HTTPActionTarget{Href: "/downloads/agent-guide.txt", Method: http.MethodGet}, ID: "download", Rel: odp.ActionDownload},
 				},
 				CollectionIDs: []string{"resources"},
 				Description:   "A short guide for building an ODP Agent",

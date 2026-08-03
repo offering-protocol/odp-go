@@ -35,12 +35,19 @@ odpService, err := service.New(service.Options{
 		Language:      "en",
 		Localizations: []string{"en"},
 		Name:          "Example Compute",
+		Protocols: &odp.ServiceProtocols{
+			Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}},
+		},
+	},
+	OperationAuthentication: map[odp.Operation]odp.AuthenticationRequirement{
+		odp.OperationGetOffering: odp.AuthenticationOptional,
 	},
 })
 ```
 
-Mount `odpService` at `/.well-known/odp` and its configured endpoint base. Authentication, AEP, MPP,
-x402, rate limiting, and application policy compose as ordinary HTTP middleware.
+Mount `odpService` at `/.well-known/odp` and its configured endpoint base. Operations default to
+`not-required`; `OperationAuthentication` advertises different access requirements. Authentication,
+AEP, MPP, x402, rate limiting, and application policy compose as ordinary HTTP middleware.
 
 ## Storage-backed catalogs
 

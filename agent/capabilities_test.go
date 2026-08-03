@@ -9,7 +9,7 @@ import (
 )
 
 func TestOfferingSearchCapabilitiesComposeServiceAndCollectionScopes(t *testing.T) {
-	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":{"supported":["get-offering","list-offerings","search-offerings"]},"search_capabilities":{"filters":{"inline":[{"description":"Region","id":"region","operators":["eq"],"title":"Region","type":"string"}]}}}`
+	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"},{"authentication":"not-required","name":"search-offerings"}],"search_capabilities":{"filters":{"inline":[{"description":"Region","id":"region","operators":["eq"],"title":"Region","type":"string"}]}}}`
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/odp+json")
 		_, _ = writer.Write([]byte(document))
@@ -33,7 +33,7 @@ func TestOfferingSearchCapabilitiesComposeServiceAndCollectionScopes(t *testing.
 }
 
 func TestOfferingSearchCapabilitiesOmitDuplicateDefinitions(t *testing.T) {
-	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":{"supported":["get-offering","list-offerings","search-offerings"]},"search_capabilities":{"filters":{"inline":[{"description":"First","id":"region","operators":["eq"],"title":"Region","type":"string"},{"description":"Second","id":"region","operators":["eq"],"title":"Region","type":"string"}]}}}`
+	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"},{"authentication":"not-required","name":"search-offerings"}],"search_capabilities":{"filters":{"inline":[{"description":"First","id":"region","operators":["eq"],"title":"Region","type":"string"},{"description":"Second","id":"region","operators":["eq"],"title":"Region","type":"string"}]}}}`
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/odp+json")
 		_, _ = writer.Write([]byte(document))

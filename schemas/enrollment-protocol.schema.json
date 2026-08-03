@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/enrollment-protocol.schema.json",
+  "title": "ODP Enrollment Protocol Descriptor",
+  "type": "object",
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "const": "aep"
+    }
+  },
+  "additionalProperties": false
+}

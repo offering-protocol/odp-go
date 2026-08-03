@@ -293,7 +293,7 @@ func serviceDocumentIssues(value ServiceDocument) []ValidationIssue {
 	if codePoints > 1024 {
 		issues = append(issues, issue("/keywords", "max-code-points", "must contain no more than 1024 code points in total"))
 	}
-	if value.SearchCapabilities != nil && !supports(value.Operations.Supported, OperationSearchOfferings) {
+	if value.SearchCapabilities != nil && !supports(value.Operations, OperationSearchOfferings) {
 		issues = append(issues, issue("/search_capabilities", "operation-support", "requires the search-offerings operation"))
 	}
 	return issues
@@ -348,9 +348,9 @@ func filterDefinitionIssues(value FilterDefinition) []ValidationIssue {
 	return issues
 }
 
-func supports(operations []Operation, expected Operation) bool {
+func supports(operations []OperationDescriptor, expected Operation) bool {
 	for _, operation := range operations {
-		if operation == expected {
+		if operation.Name == expected {
 			return true
 		}
 	}

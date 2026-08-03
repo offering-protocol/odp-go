@@ -5,10 +5,14 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "authentication",
     "id",
     "rel"
   ],
   "properties": {
+    "authentication": {
+      "$ref": "authentication-requirement.schema.json"
+    },
     "id": {
       "$ref": "local-resource-identifier.schema.json"
     },

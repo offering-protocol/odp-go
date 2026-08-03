@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	odp "github.com/offering-protocol/odp-go"
 	"github.com/offering-protocol/odp-go/agent"
 	"github.com/offering-protocol/odp-go/directory"
 )
@@ -20,20 +21,15 @@ type mockDirectory struct {
 }
 
 type directoryServiceJSON struct {
-	Description   string              `json:"description"`
-	IndexedAt     string              `json:"indexed_at"`
-	Keywords      []string            `json:"keywords,omitempty"`
-	Language      string              `json:"language"`
-	Localizations []string            `json:"localizations"`
-	Name          string              `json:"name"`
-	Operations    []string            `json:"operations"`
-	Protocols     *directoryProtocols `json:"protocols,omitempty"`
-	ServiceOrigin string              `json:"service_origin"`
-}
-
-type directoryProtocols struct {
-	Onboarding []string `json:"onboarding,omitempty"`
-	Payments   []string `json:"payments,omitempty"`
+	Description   string                    `json:"description"`
+	IndexedAt     string                    `json:"indexed_at"`
+	Keywords      []string                  `json:"keywords,omitempty"`
+	Language      string                    `json:"language"`
+	Localizations []string                  `json:"localizations"`
+	Name          string                    `json:"name"`
+	Operations    []odp.OperationDescriptor `json:"operations"`
+	Protocols     *odp.ServiceProtocols     `json:"protocols,omitempty"`
+	ServiceOrigin string                    `json:"service_origin"`
 }
 
 func createMockDirectory(ctx context.Context, candidates []string) (*mockDirectory, error) {
@@ -53,28 +49,14 @@ func createMockDirectory(ctx context.Context, candidates []string) (*mockDirecto
 		service := directory.Service{
 			Description: document.Description, IndexedAt: time.Now().UTC(), Keywords: document.Keywords,
 			Language: document.Language, Localizations: document.Localizations, Name: document.Name,
-			Operations: document.Operations.Supported, Protocols: document.Protocols, ServiceOrigin: inspection.ServiceOrigin,
+			Operations: document.Operations, Protocols: document.Protocols, ServiceOrigin: inspection.ServiceOrigin,
 		}
 		services = append(services, service)
 		serviceClients[inspection.ServiceOrigin] = client
-		operations := make([]string, len(document.Operations.Supported))
-		for index, operation := range document.Operations.Supported {
-			operations[index] = string(operation)
-		}
-		var protocols *directoryProtocols
-		if document.Protocols != nil {
-			protocols = &directoryProtocols{}
-			for _, protocol := range document.Protocols.Onboarding {
-				protocols.Onboarding = append(protocols.Onboarding, string(protocol))
-			}
-			for _, protocol := range document.Protocols.Payments {
-				protocols.Payments = append(protocols.Payments, string(protocol))
-			}
-		}
 		wireServices = append(wireServices, directoryServiceJSON{
 			Description: document.Description, IndexedAt: service.IndexedAt.Format(time.RFC3339), Keywords: document.Keywords,
 			Language: document.Language, Localizations: document.Localizations, Name: document.Name,
-			Operations: operations, Protocols: protocols, ServiceOrigin: inspection.ServiceOrigin,
+			Operations: document.Operations, Protocols: document.Protocols, ServiceOrigin: inspection.ServiceOrigin,
 		})
 	}
 	if len(services) == 0 {

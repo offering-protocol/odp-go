@@ -22,13 +22,108 @@
         "localizations": [
           "en"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "operation-authentication-is-required",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "operation-names-must-be-unique",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
         },
+        "protocols": {
+          "enrollment": [
+            {
+              "name": "aep"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "authenticated-operation-requires-enrollment",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "optional",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -50,13 +145,20 @@
           "compute",
           "rental"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "list-collections"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "list-collections"
+          }
+        ],
         "http": {
           "endpoint_base": "/catalog/odp"
         }
@@ -73,12 +175,16 @@
         "localizations": [
           "en"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -96,21 +202,36 @@
           "en"
         ],
         "protocols": {
-          "onboarding": [
-            "aep"
-          ],
           "payments": [
-            "mpp",
-            "x402"
+            {
+              "authentication": "not-required",
+              "name": "mpp"
+            },
+            {
+              "authentication": "not-required",
+              "name": "x402"
+            }
+          ],
+          "enrollment": [
+            {
+              "name": "aep"
+            }
           ]
         },
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -130,13 +251,20 @@
         "protocols": {
           "payments": []
         },
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -155,16 +283,26 @@
         ],
         "protocols": {
           "payments": [
-            "future-pay"
+            {
+              "authentication": "not-required",
+              "name": "future-pay"
+            }
           ]
         },
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -185,13 +323,20 @@
           "GPU",
           "gpu"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -211,13 +356,20 @@
         "keywords": [
           " compute"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -237,13 +389,20 @@
         "keywords": [
           "compute "
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "search-offerings"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "search-offerings"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -260,13 +419,20 @@
         "localizations": [
           "en"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering",
-            "buy-offering"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          },
+          {
+            "authentication": "not-required",
+            "name": "buy-offering"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         }
@@ -283,12 +449,16 @@
         "localizations": [
           "en"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/?tenant=1"
         }
@@ -305,12 +475,16 @@
         "localizations": [
           "en"
         ],
-        "operations": {
-          "supported": [
-            "list-offerings",
-            "get-offering"
-          ]
-        },
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
         "http": {
           "endpoint_base": "/odp/"
         },

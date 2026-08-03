@@ -9,8 +9,8 @@ import (
 )
 
 func TestOfferingDetailsBundleSchemaNormalizeActionsAndResolveOpenAPI(t *testing.T) {
-	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":{"supported":["get-offering","list-offerings"]}}`
-	offering := `{"actions":[{"http":{"href":"/downloads/item","method":"GET"},"id":"download","rel":"download"},{"id":"purchase","openapi":{"operation_id":"purchase","url":"https://api.example/openapi.json"},"rel":"purchase"}],"attributes":{"memory":80},"id":"item","name":"GPU","odp_version":"1.0","schema":{"url":"https://schemas.example/offering.json"}}`
+	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}]}`
+	offering := `{"actions":[{"authentication":"not-required","http":{"href":"/downloads/item","method":"GET"},"id":"download","rel":"download"},{"authentication":"required","id":"purchase","openapi":{"operation_id":"purchase","url":"https://api.example/openapi.json"},"rel":"purchase"}],"attributes":{"memory":80},"id":"item","name":"GPU","odp_version":"1.0","schema":{"url":"https://schemas.example/offering.json"}}`
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/odp+json")
 		if request.URL.Path == "/.well-known/odp" {
@@ -59,8 +59,8 @@ func TestOfferingDetailsBundleSchemaNormalizeActionsAndResolveOpenAPI(t *testing
 
 func TestOfferingDetailsOmitInvalidAttributesAndDuplicateActions(t *testing.T) {
 	actions, issues := normalizeActions([]odp.Action{
-		{HTTP: &odp.HTTPActionTarget{Href: "/one", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
-		{HTTP: &odp.HTTPActionTarget{Href: "/two", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
+		{Authentication: odp.AuthenticationNotRequired, HTTP: &odp.HTTPActionTarget{Href: "/one", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
+		{Authentication: odp.AuthenticationNotRequired, HTTP: &odp.HTTPActionTarget{Href: "/two", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
 	}, "https://service.example")
 	if len(actions) != 0 || len(issues) != 1 || issues[0].ActionID != "duplicate" {
 		t.Fatalf("actions = %#v, issues = %#v", actions, issues)

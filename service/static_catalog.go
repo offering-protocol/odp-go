@@ -223,6 +223,7 @@ func sign(payload string, key []byte) string {
 
 func terseOffering(offering odp.Offering) odp.Offering {
 	return odp.Offering{
+		AuthExpands:   offering.AuthExpands,
 		CollectionIDs: offering.CollectionIDs,
 		Description:   offering.Description,
 		ID:            offering.ID,
@@ -236,6 +237,7 @@ func terseOffering(offering odp.Offering) odp.Offering {
 
 func terseCollection(collection odp.Collection) odp.Collection {
 	return odp.Collection{
+		AuthExpands:   collection.AuthExpands,
 		Description:   collection.Description,
 		ID:            collection.ID,
 		Language:      collection.Language,

@@ -23,7 +23,7 @@ request := directory.SearchRequest{
 	Query: "compute",
 	Filters: &directory.ServiceFilters{
 		Keywords: []string{"gpu", "accelerator"},
-		Payments: []odp.Protocol{odp.ProtocolMPP},
+		Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP}},
 	},
 	Limit: 25,
 }

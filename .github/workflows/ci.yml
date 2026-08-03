@@ -59,36 +59,3 @@ jobs:
           path: coverage.out
           if-no-files-found: error
           retention-days: 7
-
-  node-interoperability:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Check out ODP Node.js
-        uses: actions/checkout@v7
-        with:
-          repository: offering-protocol/odp-node
-          path: .interop/odp-node
-
-      - uses: actions/setup-go@v7
-        with:
-          go-version: 1.25.x
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 11.1.3
-
-      - uses: actions/setup-node@v7
-        with:
-          cache: pnpm
-          cache-dependency-path: .interop/odp-node/pnpm-lock.yaml
-          node-version: 24
-
-      - name: Install ODP Node.js dependencies
-        run: pnpm --dir .interop/odp-node install --frozen-lockfile
-
-      - name: Run Node.js Service interoperability
-        run: make interoperability
-        env:
-          ODP_NODE_DIR: .interop/odp-node

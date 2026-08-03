@@ -51,6 +51,19 @@ const (
 	OperationSearchOfferings         Operation = "search-offerings"
 )
 
+type AuthenticationRequirement string
+
+const (
+	AuthenticationNotRequired AuthenticationRequirement = "not-required"
+	AuthenticationOptional    AuthenticationRequirement = "optional"
+	AuthenticationRequired    AuthenticationRequirement = "required"
+)
+
+type OperationDescriptor struct {
+	Authentication AuthenticationRequirement `json:"authentication"`
+	Name           Operation                 `json:"name"`
+}
+
 type AdditionalMembers map[string]json.RawMessage
 
 type Protocol string
@@ -62,8 +75,17 @@ const (
 )
 
 type ServiceProtocols struct {
-	Onboarding []Protocol `json:"onboarding,omitempty"`
-	Payments   []Protocol `json:"payments,omitempty"`
+	Enrollment []EnrollmentProtocol `json:"enrollment,omitempty"`
+	Payments   []PaymentProtocol    `json:"payments,omitempty"`
+}
+
+type EnrollmentProtocol struct {
+	Name Protocol `json:"name"`
+}
+
+type PaymentProtocol struct {
+	Authentication AuthenticationRequirement `json:"authentication"`
+	Name           Protocol                  `json:"name"`
 }
 
 type FilterType string
@@ -89,11 +111,6 @@ const (
 	OperatorLessThan           FilterOperator = "lt"
 	OperatorLessThanOrEqual    FilterOperator = "lte"
 )
-
-type Operations struct {
-	Additional AdditionalMembers `json:"-"`
-	Supported  []Operation       `json:"supported"`
-}
 
 type HTTPConfiguration struct {
 	Additional   AdditionalMembers `json:"-"`
@@ -171,21 +188,22 @@ type SearchCapabilities struct {
 }
 
 type ServiceDocument struct {
-	Additional         AdditionalMembers   `json:"-"`
-	Description        string              `json:"description"`
-	HTTP               HTTPConfiguration   `json:"http"`
-	Keywords           []string            `json:"keywords,omitempty"`
-	Language           string              `json:"language"`
-	Localizations      []string            `json:"localizations"`
-	Name               string              `json:"name"`
-	ODPVersion         string              `json:"odp_version"`
-	Operations         Operations          `json:"operations"`
-	Protocols          *ServiceProtocols   `json:"protocols,omitempty"`
-	SearchCapabilities *SearchCapabilities `json:"search_capabilities,omitempty"`
+	Additional         AdditionalMembers     `json:"-"`
+	Description        string                `json:"description"`
+	HTTP               HTTPConfiguration     `json:"http"`
+	Keywords           []string              `json:"keywords,omitempty"`
+	Language           string                `json:"language"`
+	Localizations      []string              `json:"localizations"`
+	Name               string                `json:"name"`
+	ODPVersion         string                `json:"odp_version"`
+	Operations         []OperationDescriptor `json:"operations"`
+	Protocols          *ServiceProtocols     `json:"protocols,omitempty"`
+	SearchCapabilities *SearchCapabilities   `json:"search_capabilities,omitempty"`
 }
 
 type Collection struct {
 	Additional         AdditionalMembers   `json:"-"`
+	AuthExpands        bool                `json:"auth_expands,omitempty"`
 	Description        string              `json:"description,omitempty"`
 	DetailFields       []string            `json:"detail_fields,omitempty"`
 	ID                 string              `json:"id"`
@@ -230,16 +248,18 @@ type OpenAPIActionTarget struct {
 }
 
 type Action struct {
-	Description string               `json:"description,omitempty"`
-	HTTP        *HTTPActionTarget    `json:"http,omitempty"`
-	ID          string               `json:"id"`
-	OpenAPI     *OpenAPIActionTarget `json:"openapi,omitempty"`
-	Rel         ActionRelation       `json:"rel"`
+	Authentication AuthenticationRequirement `json:"authentication"`
+	Description    string                    `json:"description,omitempty"`
+	HTTP           *HTTPActionTarget         `json:"http,omitempty"`
+	ID             string                    `json:"id"`
+	OpenAPI        *OpenAPIActionTarget      `json:"openapi,omitempty"`
+	Rel            ActionRelation            `json:"rel"`
 }
 
 type Offering struct {
 	Actions       []Action                   `json:"actions,omitempty"`
 	Additional    AdditionalMembers          `json:"-"`
+	AuthExpands   bool                       `json:"auth_expands,omitempty"`
 	Attributes    map[string]json.RawMessage `json:"attributes,omitempty"`
 	CollectionIDs []string                   `json:"collection_ids,omitempty"`
 	Description   string                     `json:"description,omitempty"`
@@ -319,14 +339,16 @@ type RefinementGroup struct {
 }
 
 type Page[Item any] struct {
-	Additional AdditionalMembers `json:"-"`
-	Items      []Item            `json:"items"`
-	Next       string            `json:"next,omitempty"`
-	ODPVersion string            `json:"odp_version"`
+	Additional  AdditionalMembers `json:"-"`
+	AuthExpands bool              `json:"auth_expands,omitempty"`
+	Items       []Item            `json:"items"`
+	Next        string            `json:"next,omitempty"`
+	ODPVersion  string            `json:"odp_version"`
 }
 
 type OfferingPage[Item any] struct {
 	Additional  AdditionalMembers `json:"-"`
+	AuthExpands bool              `json:"auth_expands,omitempty"`
 	Items       []Item            `json:"items"`
 	Next        string            `json:"next,omitempty"`
 	ODPVersion  string            `json:"odp_version"`

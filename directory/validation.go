@@ -51,23 +51,19 @@ func validateFilters(filters ServiceFilters) (ServiceFilters, error) {
 	if err != nil {
 		return ServiceFilters{}, err
 	}
-	onboarding, err := protocols(filters.Onboarding, "onboarding", []odp.Protocol{odp.ProtocolAEP})
+	enrollment, err := enrollmentFilters(filters.Enrollment)
 	if err != nil {
 		return ServiceFilters{}, err
 	}
-	payments, err := protocols(filters.Payments, "payments", []odp.Protocol{odp.ProtocolMPP, odp.ProtocolX402})
+	operationFilters, err := validateOperationFilters(filters.Operations)
 	if err != nil {
 		return ServiceFilters{}, err
 	}
-	if filters.Operations != nil && (len(filters.Operations) == 0 || len(filters.Operations) > len(operations) || !unique(filters.Operations)) {
-		return ServiceFilters{}, errors.New("operations are invalid")
+	paymentFilters, err := validatePaymentFilters(filters.Payments)
+	if err != nil {
+		return ServiceFilters{}, err
 	}
-	for _, operation := range filters.Operations {
-		if !slices.Contains(operations, operation) {
-			return ServiceFilters{}, errors.New("operations are invalid")
-		}
-	}
-	return ServiceFilters{Keywords: keywords, Onboarding: onboarding, Operations: filters.Operations, Payments: payments}, nil
+	return ServiceFilters{Enrollment: enrollment, Keywords: keywords, Operations: operationFilters, Payments: paymentFilters}, nil
 }
 
 func parseSearchPage(data []byte) (SearchPage, error) {
@@ -132,7 +128,7 @@ func parseService(data []byte) (Service, error) {
 	if err := decodeRequired(object, "localizations", &document.Localizations); err != nil {
 		return Service{}, err
 	}
-	if err := decodeRequired(object, "operations", &document.Operations.Supported); err != nil {
+	if err := decodeRequired(object, "operations", &document.Operations); err != nil {
 		return Service{}, err
 	}
 	if raw, ok := object["keywords"]; ok {
@@ -164,7 +160,7 @@ func parseService(data []byte) (Service, error) {
 		Additional:  cloneAdditional(object, "service_origin", "name", "description", "language", "localizations", "keywords", "operations", "protocols", "indexed_at"),
 		Description: document.Description, IndexedAt: indexedAt, Keywords: document.Keywords,
 		Language: document.Language, Localizations: document.Localizations, Name: document.Name,
-		Operations: document.Operations.Supported, Protocols: document.Protocols, ServiceOrigin: serviceOrigin,
+		Operations: document.Operations, Protocols: document.Protocols, ServiceOrigin: serviceOrigin,
 	}, nil
 }
 
@@ -177,19 +173,19 @@ func parseFacets(data []byte) (Facets, error) {
 	if err != nil {
 		return Facets{}, err
 	}
-	onboarding, err := parseFacet(object["onboarding"], "onboarding", []odp.Protocol{odp.ProtocolAEP})
+	enrollment, err := parseDescriptorFacet(object["enrollment"], "enrollment", parseEnrollment)
 	if err != nil {
 		return Facets{}, err
 	}
-	operationFacets, err := parseFacet(object["operations"], "operations", operations)
+	operationFacets, err := parseDescriptorFacet(object["operations"], "operations", parseOperation)
 	if err != nil {
 		return Facets{}, err
 	}
-	payments, err := parseFacet(object["payments"], "payments", []odp.Protocol{odp.ProtocolMPP, odp.ProtocolX402})
+	payments, err := parseDescriptorFacet(object["payments"], "payments", parsePayment)
 	if err != nil {
 		return Facets{}, err
 	}
-	return Facets{Keywords: keywords, Onboarding: onboarding, Operations: operationFacets, Payments: payments}, nil
+	return Facets{Enrollment: enrollment, Keywords: keywords, Operations: operationFacets, Payments: payments}, nil
 }
 
 func parseFacet[Value ~string](data []byte, name string, allowed []Value) ([]Facet[Value], error) {
@@ -218,6 +214,126 @@ func parseFacet[Value ~string](data []byte, name string, allowed []Value) ([]Fac
 		result[index] = Facet[Value]{Count: count, Value: Value(value)}
 	}
 	return result, nil
+}
+
+func parseDescriptorFacet[Value any](data []byte, name string, parse func(json.RawMessage) (Value, error)) ([]Facet[Value], error) {
+	if data == nil {
+		return nil, nil
+	}
+	var entries []struct {
+		Count json.Number     `json:"count"`
+		Value json.RawMessage `json:"value"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&entries); err != nil || len(entries) > 100 {
+		return nil, fmt.Errorf("%s facets are invalid", name)
+	}
+	result := make([]Facet[Value], len(entries))
+	for index, entry := range entries {
+		value, err := parse(entry.Value)
+		if err != nil {
+			return nil, fmt.Errorf("%s facet value is invalid", name)
+		}
+		count, err := strconvInt64(entry.Count.String())
+		if err != nil || count < 0 || count > 9_007_199_254_740_991 {
+			return nil, fmt.Errorf("%s facet count is invalid", name)
+		}
+		result[index] = Facet[Value]{Count: count, Value: value}
+	}
+	return result, nil
+}
+
+func enrollmentFilters(values []odp.EnrollmentProtocol) ([]odp.EnrollmentProtocol, error) {
+	if values == nil {
+		return nil, nil
+	}
+	if len(values) != 1 || values[0].Name != odp.ProtocolAEP {
+		return nil, errors.New("enrollment is invalid")
+	}
+	return values, nil
+}
+
+func validateOperationFilters(values []OperationFilter) ([]OperationFilter, error) {
+	if values == nil {
+		return nil, nil
+	}
+	if len(values) == 0 || len(values) > len(operations) {
+		return nil, errors.New("operations are invalid")
+	}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if !slices.Contains(operations, value.Name) || (value.Authentication != "" && !validAuthentication(value.Authentication, true)) {
+			return nil, errors.New("operations are invalid")
+		}
+		identity := string(value.Name) + "\x00" + string(value.Authentication)
+		if _, exists := seen[identity]; exists {
+			return nil, errors.New("operations are invalid")
+		}
+		seen[identity] = struct{}{}
+	}
+	return values, nil
+}
+
+func validatePaymentFilters(values []PaymentFilter) ([]PaymentFilter, error) {
+	if values == nil {
+		return nil, nil
+	}
+	if len(values) == 0 || len(values) > 2 {
+		return nil, errors.New("payments are invalid")
+	}
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) || (value.Authentication != "" && !validAuthentication(value.Authentication, false)) {
+			return nil, errors.New("payments are invalid")
+		}
+		identity := string(value.Name) + "\x00" + string(value.Authentication)
+		if _, exists := seen[identity]; exists {
+			return nil, errors.New("payments are invalid")
+		}
+		seen[identity] = struct{}{}
+	}
+	return values, nil
+}
+
+func parseEnrollment(data json.RawMessage) (odp.EnrollmentProtocol, error) {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil || len(object) != 1 {
+		return odp.EnrollmentProtocol{}, errors.New("enrollment descriptor is invalid")
+	}
+	var name odp.Protocol
+	if json.Unmarshal(object["name"], &name) != nil || name != odp.ProtocolAEP {
+		return odp.EnrollmentProtocol{}, errors.New("enrollment descriptor is invalid")
+	}
+	return odp.EnrollmentProtocol{Name: name}, nil
+}
+
+func parseOperation(data json.RawMessage) (odp.OperationDescriptor, error) {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil || len(object) != 2 {
+		return odp.OperationDescriptor{}, errors.New("operation descriptor is invalid")
+	}
+	var value odp.OperationDescriptor
+	if json.Unmarshal(object["authentication"], &value.Authentication) != nil || json.Unmarshal(object["name"], &value.Name) != nil || !validAuthentication(value.Authentication, true) || !slices.Contains(operations, value.Name) {
+		return odp.OperationDescriptor{}, errors.New("operation descriptor is invalid")
+	}
+	return value, nil
+}
+
+func parsePayment(data json.RawMessage) (odp.PaymentProtocol, error) {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil || len(object) != 2 {
+		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
+	}
+	var value odp.PaymentProtocol
+	if json.Unmarshal(object["authentication"], &value.Authentication) != nil || json.Unmarshal(object["name"], &value.Name) != nil || !validAuthentication(value.Authentication, false) || (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) {
+		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
+	}
+	return value, nil
+}
+
+func validAuthentication(value odp.AuthenticationRequirement, optional bool) bool {
+	return value == odp.AuthenticationNotRequired || value == odp.AuthenticationRequired || (optional && value == odp.AuthenticationOptional)
 }
 
 func parseSuggestions(data []byte) ([]string, error) {
@@ -265,21 +381,6 @@ func uniqueText(values []string, name string, maximumItems, maximumLength int) (
 	for _, value := range values {
 		if _, err := requireText(value, name, 1, maximumLength); err != nil {
 			return nil, err
-		}
-	}
-	return values, nil
-}
-
-func protocols(values []odp.Protocol, name string, allowed []odp.Protocol) ([]odp.Protocol, error) {
-	if values == nil {
-		return nil, nil
-	}
-	if len(values) == 0 || len(values) > len(allowed) || !unique(values) {
-		return nil, fmt.Errorf("%s are invalid", name)
-	}
-	for _, value := range values {
-		if !slices.Contains(allowed, value) {
-			return nil, fmt.Errorf("%s are invalid", name)
 		}
 	}
 	return values, nil
