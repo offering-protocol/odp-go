@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/action.schema.json",
+  "title": "ODP Offering Action",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "rel"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "local-resource-identifier.schema.json"
+    },
+    "rel": {
+      "$ref": "action-relation.schema.json"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "http": {
+      "$ref": "http-action-target.schema.json"
+    },
+    "openapi": {
+      "$ref": "openapi-action-target.schema.json"
+    }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "http"
+      ],
+      "not": {
+        "required": [
+          "openapi"
+        ]
+      }
+    },
+    {
+      "required": [
+        "openapi"
+      ],
+      "not": {
+        "required": [
+          "http"
+        ]
+      }
+    }
+  ]
+}

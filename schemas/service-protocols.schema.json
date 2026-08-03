@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/service-protocols.schema.json",
+  "title": "ODP Service protocol support",
+  "type": "object",
+  "minProperties": 1,
+  "properties": {
+    "onboarding": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "const": "aep"
+      }
+    },
+    "payments": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "mpp",
+          "x402"
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

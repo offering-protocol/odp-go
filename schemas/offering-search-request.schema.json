@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/offering-search-request.schema.json",
+  "title": "ODP Offering search request",
+  "type": "object",
+  "required": [
+    "odp_version"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "query"
+      ]
+    },
+    {
+      "required": [
+        "filters"
+      ]
+    }
+  ],
+  "dependentRequired": {
+    "include_descendants": [
+      "collection_id"
+    ]
+  },
+  "properties": {
+    "odp_version": {
+      "const": "1.0"
+    },
+    "query": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "\\S"
+    },
+    "filters": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "filter-expression.schema.json"
+      }
+    },
+    "collection_id": {
+      "$ref": "local-resource-identifier.schema.json"
+    },
+    "include_descendants": {
+      "type": "boolean",
+      "default": false
+    },
+    "sort": {
+      "$ref": "capability-identifier.schema.json"
+    },
+    "refinements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "capability-identifier.schema.json"
+      }
+    },
+    "limit": {
+      "$ref": "page-limit.schema.json"
+    }
+  }
+}

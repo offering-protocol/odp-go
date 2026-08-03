@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/offering-search-response.schema.json",
+  "title": "ODP Offering search response",
+  "allOf": [
+    {
+      "$ref": "page-envelope.schema.json"
+    }
+  ],
+  "properties": {
+    "refinements": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "refinement-group.schema.json"
+      }
+    }
+  }
+}

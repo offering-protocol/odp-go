@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/search-capabilities.schema.json",
+  "title": "ODP search capability advertisement",
+  "type": "object",
+  "anyOf": [
+    {
+      "required": [
+        "filters"
+      ]
+    },
+    {
+      "required": [
+        "sorts"
+      ]
+    }
+  ],
+  "properties": {
+    "filters": {
+      "$ref": "filter-capability-source.schema.json"
+    },
+    "sorts": {
+      "$ref": "sort-capability-source.schema.json"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/schema-reference.schema.json",
+  "title": "ODP JSON Schema reference",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "url"
+  ],
+  "properties": {
+    "url": {
+      "$ref": "resource-reference.schema.json"
+    }
+  }
+}

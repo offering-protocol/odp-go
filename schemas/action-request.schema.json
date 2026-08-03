@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/action-request.schema.json",
+  "title": "ODP compact Action request body",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "content_type": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "schema": {
+      "$ref": "schema-reference.schema.json"
+    }
+  }
+}

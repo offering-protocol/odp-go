@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/representation.schema.json",
+  "title": "ODP representation selection",
+  "description": "The requested completeness level for Collection or Offering representations.",
+  "type": "string",
+  "enum": [
+    "terse",
+    "full"
+  ]
+}

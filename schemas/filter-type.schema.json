@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/filter-type.schema.json",
+  "title": "ODP filter value type",
+  "enum": [
+    "string",
+    "boolean",
+    "integer",
+    "number",
+    "decimal",
+    "date",
+    "date-time"
+  ]
+}

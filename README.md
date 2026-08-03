@@ -37,6 +37,56 @@ import (
 Role packages depend toward the root `odp` package; `agent` composes `directory`. The root package
 does not depend on role packages, and `service` does not depend on Agent or directory behavior.
 
+## Protocol core
+
+The root package validates wire documents against the exact schemas published by `odp-specs`, then
+decodes them into typed Go values. JSON members permitted by the protocol's additive evolution rules
+are preserved in `Additional` and survive a marshal round trip.
+
+```go
+document, err := odp.ParseServiceDocument(body)
+if err != nil {
+	var validation *odp.ValidationError
+	if errors.As(err, &validation) {
+		log.Printf("invalid Service Document: %+v", validation.Issues)
+	}
+	return err
+}
+
+origin, err := odp.DeriveServiceOrigin(serviceDocumentURL)
+if err != nil {
+	return err
+}
+
+offeringURL, err := odp.BuildOperationURL(
+	document.HTTP.EndpointBase,
+	odp.OperationGetOffering,
+	origin,
+	"gpu-a100",
+)
+```
+
+Pagination uses Go iterators, carries cancellation through `context.Context`, rejects continuation
+loops, and enforces the protocol's 16-page traversal limit.
+
+```go
+for offering, err := range odp.IterateItems(ctx, firstPage, loadPage) {
+	if err != nil {
+		return err
+	}
+	consume(offering)
+}
+```
+
+Collection search distinguishes an omitted hierarchy constraint, a root-Collection constraint, and
+a specific parent:
+
+```go
+unconstrained := odp.CollectionSearchRequest{ODPVersion: odp.Version, Query: "desk"}
+roots := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Null[string]()}
+children := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Some("office")}
+```
+
 ## Development
 
 Go 1.25 or newer is required. Run the complete merge gate with:
@@ -44,6 +94,9 @@ Go 1.25 or newer is required. Run the complete merge gate with:
 ```sh
 make verify
 ```
+
+When an `odp-specs` checkout is available, verify the bundled schemas and conformance vectors with
+`ODP_SPECS_DIR=/path/to/odp-specs make spec-sync`. Continuous integration runs both gates.
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for the contributor workflow and
 [`odp-specs`](https://github.com/offering-protocol/odp-specs) for the normative draft, schemas,

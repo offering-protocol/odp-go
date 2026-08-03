@@ -1,0 +1,144 @@
+{
+  "id": "errors-limits-contract",
+  "title": "Problem Details, resource limits, and retry behavior",
+  "drafts": [
+    "draft-kavian-offering-discovery-protocol-00"
+  ],
+  "category": "errors-limits",
+  "applies_to": [
+    "agent",
+    "service"
+  ],
+  "subject": "errors-limits-contract",
+  "cases": [
+    {
+      "name": "invalid-request-problem",
+      "operation": "validate-problem",
+      "http_status": 400,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/invalid-request",
+        "title": "Invalid request",
+        "status": 400,
+        "code": "INVALID_REQUEST",
+        "invalid_params": [
+          {
+            "in": "query",
+            "name": "limit",
+            "reason": "Must be an integer from 1 through 100."
+          }
+        ]
+      },
+      "valid": true
+    },
+    {
+      "name": "missing-problem-code",
+      "operation": "validate-problem",
+      "http_status": 400,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/invalid-request",
+        "title": "Invalid request",
+        "status": 400
+      },
+      "valid": false
+    },
+    {
+      "name": "status-mismatch",
+      "operation": "validate-problem",
+      "http_status": 400,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/invalid-request",
+        "title": "Invalid request",
+        "status": 422,
+        "code": "INVALID_REQUEST"
+      },
+      "valid": false
+    },
+    {
+      "name": "unknown-future-code",
+      "operation": "validate-problem",
+      "http_status": 409,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/catalog-revision-conflict",
+        "title": "Catalog revision conflict",
+        "status": 409,
+        "code": "CATALOG_REVISION_CONFLICT",
+        "future_extension": true
+      },
+      "valid": true
+    },
+    {
+      "name": "request-limit-boundary",
+      "operation": "validate-limit",
+      "resource": "request",
+      "bytes": 65536,
+      "valid": true
+    },
+    {
+      "name": "request-limit-exceeded",
+      "operation": "validate-limit",
+      "resource": "request",
+      "bytes": 65537,
+      "valid": false
+    },
+    {
+      "name": "offering-limit-boundary",
+      "operation": "validate-limit",
+      "resource": "offering",
+      "bytes": 524288,
+      "valid": true
+    },
+    {
+      "name": "schema-graph-limit-exceeded",
+      "operation": "validate-limit",
+      "resource": "schema_graph",
+      "bytes": 1048577,
+      "valid": false
+    },
+    {
+      "name": "page-failure-preserves-prior-items",
+      "operation": "limit-failure-scope",
+      "prior_items": 50,
+      "current_page_valid": false,
+      "expected": {
+        "preserved_items": 50,
+        "continue": false
+      }
+    },
+    {
+      "name": "retry-after-within-budget",
+      "operation": "retry",
+      "status": 429,
+      "retry_after_seconds": 5,
+      "attempt": 1,
+      "elapsed_seconds": 0,
+      "retry": true
+    },
+    {
+      "name": "retry-after-exceeds-budget",
+      "operation": "retry",
+      "status": 429,
+      "retry_after_seconds": 31,
+      "attempt": 1,
+      "elapsed_seconds": 0,
+      "retry": false
+    },
+    {
+      "name": "retry-count-exhausted",
+      "operation": "retry",
+      "status": 503,
+      "retry_after_seconds": 1,
+      "attempt": 4,
+      "elapsed_seconds": 3,
+      "retry": false
+    },
+    {
+      "name": "continuation-expiration-is-not-retried",
+      "operation": "retry",
+      "status": 410,
+      "retry_after_seconds": 1,
+      "attempt": 1,
+      "elapsed_seconds": 0,
+      "retry": false
+    }
+  ]
+}

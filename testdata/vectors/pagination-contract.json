@@ -1,0 +1,144 @@
+{
+  "id": "pagination-contract",
+  "title": "Page envelope, continuation, ordering, and caching",
+  "drafts": [
+    "draft-kavian-offering-discovery-protocol-00"
+  ],
+  "category": "pagination",
+  "applies_to": [
+    "agent",
+    "service"
+  ],
+  "subject": "pagination-contract",
+  "cases": [
+    {
+      "name": "continuation-page",
+      "operation": "validate-page",
+      "page": {
+        "odp_version": "1.0",
+        "items": [
+          {
+            "id": "a"
+          }
+        ],
+        "next": "/odp/offerings/pages/eyJhZnRlciI6ImEifQ"
+      },
+      "valid": true
+    },
+    {
+      "name": "empty-final-page",
+      "operation": "validate-page",
+      "page": {
+        "odp_version": "1.0",
+        "items": []
+      },
+      "valid": true
+    },
+    {
+      "name": "empty-next-link",
+      "operation": "validate-page",
+      "page": {
+        "odp_version": "1.0",
+        "items": [],
+        "next": ""
+      },
+      "valid": false
+    },
+    {
+      "name": "minimum-limit",
+      "operation": "validate-limit",
+      "limit": 1,
+      "valid": true
+    },
+    {
+      "name": "maximum-limit",
+      "operation": "validate-limit",
+      "limit": 100,
+      "valid": true
+    },
+    {
+      "name": "excessive-limit",
+      "operation": "validate-limit",
+      "limit": 101,
+      "valid": false
+    },
+    {
+      "name": "stable-distinct-sequence",
+      "operation": "validate-sequence",
+      "pages": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "c",
+          "d"
+        ]
+      ],
+      "valid": true
+    },
+    {
+      "name": "duplicate-across-pages",
+      "operation": "validate-sequence",
+      "pages": [
+        [
+          "a",
+          "b"
+        ],
+        [
+          "b",
+          "c"
+        ]
+      ],
+      "valid": false
+    },
+    {
+      "name": "service-controlled-get-continuation",
+      "operation": "validate-next",
+      "service_origin": "https://market.example",
+      "next": "/odp/search-pages/eyJxdWVyeSI6ImRlc2sifQ",
+      "method": "GET",
+      "valid": true
+    },
+    {
+      "name": "cross-origin-continuation",
+      "operation": "validate-next",
+      "service_origin": "https://market.example",
+      "next": "https://other.example/pages/abc",
+      "method": "GET",
+      "valid": false
+    },
+    {
+      "name": "minimum-continuation-lifetime",
+      "operation": "validate-lifetime",
+      "lifetime_seconds": 3600,
+      "valid": true
+    },
+    {
+      "name": "short-continuation-lifetime",
+      "operation": "validate-lifetime",
+      "lifetime_seconds": 3599,
+      "valid": false
+    },
+    {
+      "name": "stateless-cursor",
+      "operation": "validate-storage-model",
+      "storage_model": "stateless",
+      "valid": true
+    },
+    {
+      "name": "stateful-cursor",
+      "operation": "validate-storage-model",
+      "storage_model": "stateful",
+      "valid": true
+    },
+    {
+      "name": "conditional-get-not-modified",
+      "operation": "conditional-get",
+      "method": "GET",
+      "validator_matches": true,
+      "status": 304,
+      "valid": true
+    }
+  ]
+}

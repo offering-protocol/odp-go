@@ -19,13 +19,21 @@ jobs:
           - 1.25.x
           - 1.26.x
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v6
+      - name: Check out ODP specifications
+        uses: actions/checkout@v7
+        with:
+          repository: offering-protocol/odp-specs
+          path: .conformance/odp-specs
+
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
 
-      - run: make verify
+      - run: make spec-sync verify
+        env:
+          ODP_SPECS_DIR: .conformance/odp-specs
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7

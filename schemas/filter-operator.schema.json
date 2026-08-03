@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/filter-operator.schema.json",
+  "title": "ODP filter operator",
+  "enum": [
+    "eq",
+    "in",
+    "lt",
+    "lte",
+    "gt",
+    "gte",
+    "exists"
+  ]
+}

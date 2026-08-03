@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/capability-link.schema.json",
+  "title": "ODP linked capability source",
+  "type": "object",
+  "required": [
+    "href"
+  ],
+  "properties": {
+    "href": {
+      "$ref": "resource-reference.schema.json"
+    }
+  }
+}

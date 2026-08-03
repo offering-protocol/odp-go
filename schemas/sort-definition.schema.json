@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/sort-definition.schema.json",
+  "title": "ODP Sort Definition",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "description",
+    "keys"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "capability-identifier.schema.json"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "$ref": "sort-key.schema.json"
+      }
+    }
+  }
+}

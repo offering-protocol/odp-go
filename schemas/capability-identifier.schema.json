@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/capability-identifier.schema.json",
+  "title": "ODP Service-local capability identifier",
+  "type": "string",
+  "minLength": 1,
+  "maxLength": 64,
+  "pattern": "^[A-Za-z0-9._~-]+$"
+}
