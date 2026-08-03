@@ -87,6 +87,21 @@ roots := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Null
 children := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.Some("office")}
 ```
 
+## Service integration
+
+Package `service` implements the ODP HTTP runtime for Go's standard `net/http` stack. Small Services
+can use its validated static catalog; large Services provide storage-backed operation functions.
+Optional functions directly control the operations advertised by the Service Document.
+
+Run the complete small-Service example with:
+
+```sh
+go run ./examples/odp-service-small
+```
+
+See the [Service package guide](./service/README.md) and
+[runnable example](./examples/odp-service-small/README.md).
+
 ## Development
 
 Go 1.25 or newer is required. Run the complete merge gate with:
