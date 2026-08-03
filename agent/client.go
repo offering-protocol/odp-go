@@ -21,16 +21,18 @@ const (
 )
 
 type ServiceClient struct {
-	acceptLanguage  string
-	cache           Cache
-	client          *http.Client
-	fallbacks       CacheFallbacks
-	initialPageSize int
-	inspectionGate  chan struct{}
-	maxRedirects    int
-	partition       string
-	resourceCache   Cache
-	serviceOrigin   string
+	acceptLanguage   string
+	cache            Cache
+	client           *http.Client
+	fallbacks        CacheFallbacks
+	initialPageSize  int
+	inspectionGate   chan struct{}
+	maxRedirects     int
+	partition        string
+	resourceCache    Cache
+	serviceOrigin    string
+	supportingClient *http.Client
+	supportingCache  Cache
 }
 
 func NewServiceClient(options ServiceClientOptions) (*ServiceClient, error) {
@@ -73,6 +75,12 @@ func NewServiceClient(options ServiceClientOptions) (*ServiceClient, error) {
 	}
 	client := *base
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	supportingBase := options.SupportingHTTPClient
+	if supportingBase == nil {
+		supportingBase = http.DefaultClient
+	}
+	supportingClient := *supportingBase
+	supportingClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	cache := options.Cache
 	if cache == nil {
 		cache = NewMemoryCache()
@@ -84,7 +92,7 @@ func NewServiceClient(options ServiceClientOptions) (*ServiceClient, error) {
 	return &ServiceClient{
 		acceptLanguage: options.AcceptLanguage, cache: cache, client: &client, fallbacks: fallbacks,
 		initialPageSize: options.InitialPageSize, inspectionGate: make(chan struct{}, 1), maxRedirects: options.MaxRedirects,
-		partition: options.CachePartition, resourceCache: resourceCache, serviceOrigin: serviceOrigin,
+		partition: options.CachePartition, resourceCache: resourceCache, serviceOrigin: serviceOrigin, supportingCache: cache, supportingClient: &supportingClient,
 	}, nil
 }
 

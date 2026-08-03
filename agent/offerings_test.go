@@ -1,0 +1,68 @@
+package agent
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	odp "github.com/offering-protocol/odp-go"
+)
+
+func TestOfferingDetailsBundleSchemaNormalizeActionsAndResolveOpenAPI(t *testing.T) {
+	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":{"supported":["get-offering","list-offerings"]}}`
+	offering := `{"actions":[{"http":{"href":"/downloads/item","method":"GET"},"id":"download","rel":"download"},{"id":"purchase","openapi":{"operation_id":"purchase","url":"https://api.example/openapi.json"},"rel":"purchase"}],"attributes":{"memory":80},"id":"item","name":"GPU","odp_version":"1.0","schema":{"url":"https://schemas.example/offering.json"}}`
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/odp+json")
+		if request.URL.Path == "/.well-known/odp" {
+			_, _ = writer.Write([]byte(document))
+			return
+		}
+		if request.URL.Path == "/odp/offerings/item" {
+			_, _ = writer.Write([]byte(offering))
+			return
+		}
+		http.NotFound(writer, request)
+	}))
+	defer server.Close()
+	supporting := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		switch request.URL.String() {
+		case "https://schemas.example/offering.json":
+			return jsonResponse(request, `{"$schema":"https://json-schema.org/draft/2020-12/schema","properties":{"memory":{"minimum":1,"type":"integer"}},"required":["memory"],"type":"object"}`, "application/schema+json"), nil
+		case "https://api.example/openapi.json":
+			return jsonResponse(request, `{"openapi":"3.1.0","info":{"title":"Purchase","version":"1"},"paths":{"/purchase":{"post":{"operationId":"purchase","responses":{"200":{"description":"Purchased"}}}}}}`, "application/json"), nil
+		default:
+			panic("unexpected supporting request: " + request.URL.String())
+		}
+	})}
+	client, err := NewServiceClient(ServiceClientOptions{ServiceURL: server.URL, SupportingHTTPClient: supporting})
+	if err != nil {
+		t.Fatal(err)
+	}
+	details, err := client.GetOfferingDetails(t.Context(), "item")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(details.Actions) != 2 || details.Actions[0].HTTP.URL != server.URL+"/downloads/item" {
+		t.Fatalf("actions = %#v", details.Actions)
+	}
+	if details.AttributeSchema == nil || details.Offering.Attributes == nil || len(details.Issues) != 0 {
+		t.Fatalf("details = %#v", details)
+	}
+	resolved, err := client.ResolveAction(t.Context(), "item", "purchase")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved.Operation["operationId"] != "purchase" || resolved.OpenAPIDocument["openapi"] != "3.1.0" {
+		t.Fatalf("resolved = %#v", resolved)
+	}
+}
+
+func TestOfferingDetailsOmitInvalidAttributesAndDuplicateActions(t *testing.T) {
+	actions, issues := normalizeActions([]odp.Action{
+		{HTTP: &odp.HTTPActionTarget{Href: "/one", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
+		{HTTP: &odp.HTTPActionTarget{Href: "/two", Method: http.MethodGet}, ID: "duplicate", Rel: odp.ActionDownload},
+	}, "https://service.example")
+	if len(actions) != 0 || len(issues) != 1 || issues[0].ActionID != "duplicate" {
+		t.Fatalf("actions = %#v, issues = %#v", actions, issues)
+	}
+}
