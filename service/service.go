@@ -2,7 +2,6 @@
 package service
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -17,6 +16,7 @@ import (
 	"unicode/utf8"
 
 	odp "github.com/offering-protocol/odp-go"
+	"github.com/offering-protocol/odp-go/internal/jsonvalue"
 )
 
 const (
@@ -103,7 +103,7 @@ func New(options Options) (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(encoded) > MaximumRequestBodyBytes || jsonDepth(encoded) > maximumDocumentDepth {
+	if len(encoded) > MaximumRequestBodyBytes || jsonvalue.Depth(encoded) > maximumDocumentDepth {
 		return nil, errors.New("ODP Service Document exceeds its resource limits")
 	}
 	return &Service{
@@ -429,7 +429,7 @@ func readRequestBody(request *http.Request) ([]byte, error) {
 	if !utf8.Valid(data) {
 		return nil, requestError(http.StatusBadRequest, "INVALID_REQUEST", "ODP request body must use UTF-8")
 	}
-	if depth := jsonDepth(data); depth > maximumResourceDepth {
+	if depth := jsonvalue.Depth(data); depth > maximumResourceDepth {
 		return nil, requestError(http.StatusBadRequest, "INVALID_REQUEST", "ODP request body exceeds its JSON depth limit")
 	}
 	return data, nil
@@ -520,7 +520,7 @@ func writeJSON(writer http.ResponseWriter, value any, language string, maximumBy
 	if err != nil {
 		return err
 	}
-	if len(encoded) > maximumBytes || jsonDepth(encoded) > maximumDepth {
+	if len(encoded) > maximumBytes || jsonvalue.Depth(encoded) > maximumDepth {
 		return errors.New("ODP response exceeds its resource limits")
 	}
 	writer.Header().Set("Content-Language", language)
@@ -528,31 +528,6 @@ func writeJSON(writer http.ResponseWriter, value any, language string, maximumBy
 	writer.Header().Set("Vary", "Accept-Language")
 	_, err = writer.Write(encoded)
 	return err
-}
-
-func jsonDepth(data []byte) int {
-	var value any
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if err := decoder.Decode(&value); err != nil {
-		return 0
-	}
-	var depth func(any) int
-	depth = func(value any) int {
-		maximum := 0
-		switch typed := value.(type) {
-		case []any:
-			for _, item := range typed {
-				maximum = max(maximum, depth(item))
-			}
-		case map[string]any:
-			for _, item := range typed {
-				maximum = max(maximum, depth(item))
-			}
-		}
-		return maximum + 1
-	}
-	return depth(value)
 }
 
 func writeProblem(writer http.ResponseWriter, problem *Error) {
@@ -564,7 +539,7 @@ func writeProblem(writer http.ResponseWriter, problem *Error) {
 	if err != nil {
 		encoded = nil
 	}
-	if _, err := odp.ParseProblemResponse(encoded, problem.Status); err != nil || len(encoded) > 16_384 || jsonDepth(encoded) > maximumResourceDepth {
+	if _, err := odp.ParseProblemResponse(encoded, problem.Status); err != nil || len(encoded) > 16_384 || jsonvalue.Depth(encoded) > maximumResourceDepth {
 		problem = &Error{
 			Code: "INTERNAL_ERROR", Message: "The ODP Service could not complete the request", Status: http.StatusInternalServerError,
 		}

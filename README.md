@@ -115,6 +115,23 @@ for candidate, err := range directoryClient.SearchServices(ctx, directory.Search
 See the [directory package guide](./directory/README.md) for page traversal, suggestions, and
 sandbox usage.
 
+## Agent integration
+
+Package `agent` inspects live Service Documents and provides validated, lazy Collection and Offering
+navigation. Its federated discovery client searches candidate Services through `directory`, queries
+their catalogs with bounded concurrency, and emits results in directory order.
+
+Run the small Service and Agent examples in separate terminals:
+
+```sh
+go run ./examples/odp-service-small
+go run ./examples/odp-agent-discovery
+```
+
+The Agent example uses a clearly labeled mock directory and performs live inspection, listing, and
+full Offering retrieval against every reachable configured Service. See the
+[Agent package guide](./agent/README.md) for caching, transport composition, and API usage.
+
 ## Service integration
 
 Package `service` implements the ODP HTTP runtime for Go's standard `net/http` stack. Small Services
