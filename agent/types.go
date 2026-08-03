@@ -64,14 +64,94 @@ type Cache interface {
 }
 
 type ServiceClientOptions struct {
-	AcceptLanguage  string
-	Cache           Cache
-	CacheFallbacks  CacheFallbacks
-	CachePartition  string
-	HTTPClient      *http.Client
-	InitialPageSize int
-	MaxRedirects    int
-	ServiceURL      string
+	AcceptLanguage       string
+	Cache                Cache
+	CacheFallbacks       CacheFallbacks
+	CachePartition       string
+	HTTPClient           *http.Client
+	SupportingHTTPClient *http.Client
+	InitialPageSize      int
+	MaxRedirects         int
+	ServiceURL           string
+}
+
+type CapabilityScope string
+
+const (
+	CapabilityScopeCollection CapabilityScope = "collection"
+	CapabilityScopeService    CapabilityScope = "service"
+)
+
+type CapabilityKind string
+
+const (
+	CapabilityKindFilters CapabilityKind = "filters"
+	CapabilityKindSorts   CapabilityKind = "sorts"
+)
+
+type CapabilityIssue struct {
+	Kind    CapabilityKind
+	Message string
+	Scope   CapabilityScope
+}
+
+type ResolvedSortDefinition struct {
+	odp.SortDefinition
+	Filters []odp.FilterDefinition
+}
+
+type SearchCapabilityCatalog struct {
+	Filters map[string]odp.FilterDefinition
+	Issues  []CapabilityIssue
+	Sorts   map[string]ResolvedSortDefinition
+}
+
+type OfferingIssue struct {
+	ActionID string
+	Message  string
+	Scope    OfferingIssueScope
+}
+
+type OfferingIssueScope string
+
+const (
+	OfferingIssueAction          OfferingIssueScope = "action"
+	OfferingIssueAttributeSchema OfferingIssueScope = "attribute_schema"
+	OfferingIssueAttributes      OfferingIssueScope = "attributes"
+)
+
+type DiscoveredHTTPAction struct {
+	Method               string
+	Request              *odp.ActionRequest
+	ResponseContentTypes []string
+	URL                  string
+}
+
+type DiscoveredOpenAPIAction struct {
+	OperationID string
+	URL         string
+}
+
+type DiscoveredAction struct {
+	Description string
+	HTTP        *DiscoveredHTTPAction
+	ID          string
+	OpenAPI     *DiscoveredOpenAPIAction
+	Rel         odp.ActionRelation
+}
+
+type OfferingDetails struct {
+	odp.Offering
+	Actions         []DiscoveredAction
+	AttributeSchema map[string]any
+	Issues          []OfferingIssue
+}
+
+type ResolvedAction struct {
+	Action          DiscoveredAction
+	OpenAPIDocument map[string]any
+	Operation       map[string]any
+	RequestSchema   map[string]any
 }
 
 type ListOptions struct {

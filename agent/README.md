@@ -51,7 +51,9 @@ for offering, err := range client.SearchOfferings(ctx, agent.OfferingSearchOptio
 	consume(offering)
 }
 
-details, err := client.GetOffering(ctx, "gpu-h100", odp.RepresentationFull)
+offering, err := client.GetOffering(ctx, "gpu-h100", odp.RepresentationFull)
+
+details, err := client.GetOfferingDetails(ctx, "gpu-h100")
 ```
 
 The same client lists, retrieves, and searches Collections and lists the direct Offerings in a
@@ -67,6 +69,44 @@ this prevents authenticated or payment-dependent representations from sharing a 
 `RequestError` preserves ODP Problem Details and response headers, exposes a stable error code, and
 marks rate-limit and server failures as retryable so application transports can compose AEP, MPP,
 and x402 challenges.
+
+## Use search capabilities and Offering details
+
+Capability methods combine Service-wide definitions with the selected Collection and resolve linked
+definition pages. Duplicate definitions and Sorts that reference unavailable Filters are omitted and
+reported through `SearchCapabilityCatalog.Issues`.
+
+```go
+capabilities, err := client.GetOfferingSearchCapabilities(ctx, "accelerators")
+if err != nil {
+	return err
+}
+
+memory := capabilities.Filters["accelerator-memory"]
+```
+
+`GetOfferingDetails` validates Attributes against the Offering's JSON Schema, bundles external
+schema references, and converts Action targets to absolute URLs. Unavailable schemas, invalid
+Attributes, and unusable Actions are omitted from the corresponding enriched fields and reported in
+`OfferingDetails.Issues`; the protocol Offering remains available in `OfferingDetails.Offering`.
+
+```go
+details, err := client.GetOfferingDetails(ctx, "gpu-h100")
+if err != nil {
+	return err
+}
+
+resolved, err := client.ResolveAction(ctx, "gpu-h100", "purchase")
+if err != nil {
+	return err
+}
+```
+
+`ResolveAction` returns an HTTP Action's request schema or an OpenAPI 3.1 document and its uniquely
+selected operation. It does not invoke the Action. Supporting schemas and OpenAPI documents use a
+separate anonymous HTTP client and must use HTTPS. Supply `SupportingHTTPClient` only when those
+requests need custom network transport; keep it free of Service credentials. Attribute Schemas use
+a 24-hour fallback freshness, while OpenAPI documents require explicit HTTP freshness metadata.
 
 ## Discover Offerings across Services
 
