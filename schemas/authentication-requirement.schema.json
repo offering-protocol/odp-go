@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/authentication-requirement.schema.json",
+  "title": "ODP Authentication Requirement",
+  "type": "string",
+  "enum": [
+    "not-required",
+    "optional",
+    "required"
+  ]
+}

@@ -32,6 +32,10 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 		Document: odp.ServiceDocument{
 			Description: "Example catalog", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"},
 			Language: "en", Localizations: []string{"en"}, Name: "Example",
+			Protocols: &odp.ServiceProtocols{Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}}},
+		},
+		OperationAuthentication: map[odp.Operation]odp.AuthenticationRequirement{
+			odp.OperationGetOffering: odp.AuthenticationOptional,
 		},
 	})
 	if err != nil {
@@ -58,6 +62,9 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 	}
 	if inspection.Freshness != agent.FreshnessFetched || inspection.Document.Name != "Example" {
 		t.Fatalf("inspection = %#v", inspection)
+	}
+	if len(inspection.Capabilities.Operations) == 0 || !hasOperationAuthentication(inspection.Capabilities.Operations, odp.OperationGetOffering, odp.AuthenticationOptional) {
+		t.Fatalf("operation capabilities = %#v", inspection.Capabilities.Operations)
 	}
 	cached, err := client.Inspect(t.Context())
 	if err != nil {
@@ -117,6 +124,15 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 	if wellKnownRequests.Load() != 1 || requests.Load() < 6 {
 		t.Fatalf("requests = %d, well-known requests = %d", requests.Load(), wellKnownRequests.Load())
 	}
+}
+
+func hasOperationAuthentication(operations []odp.OperationDescriptor, name odp.Operation, authentication odp.AuthenticationRequirement) bool {
+	for _, operation := range operations {
+		if operation.Name == name && operation.Authentication == authentication {
+			return true
+		}
+	}
+	return false
 }
 
 func TestServiceClientSearchesValidatedRequest(t *testing.T) {
@@ -375,6 +391,29 @@ func TestServiceClientCachesOnlyValidatedRepresentationsAndRevalidates(t *testin
 	})
 }
 
+func TestServiceClientPartitionsSharedCacheByAccessContext(t *testing.T) {
+	var requests atomic.Int64
+	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
+		requests.Add(1)
+		return response(http.StatusOK, documentJSON("get-offering", "list-offerings"), nil, service.MediaType), nil
+	})
+	cache := agent.NewMemoryCache()
+	for _, partition := range []string{"principal:alice", "principal:bob", "principal:alice"} {
+		client, err := agent.NewServiceClient(agent.ServiceClientOptions{
+			Cache: cache, CachePartition: partition, HTTPClient: &http.Client{Transport: transport}, ServiceURL: "https://service.example",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := client.Inspect(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("requests = %d, want 2", requests.Load())
+	}
+}
+
 func TestServiceClientRejectsExcessiveResponseDepthAndProblemSize(t *testing.T) {
 	t.Run("Service Document depth", func(t *testing.T) {
 		deep := strings.Repeat("[", 9) + "0" + strings.Repeat("]", 9)
@@ -433,6 +472,36 @@ func TestServiceClientHonorsPageAndItemBounds(t *testing.T) {
 	}
 }
 
+func TestServiceClientResumesValidatedOfferingContinuation(t *testing.T) {
+	var method string
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		method = request.Method
+		return response(http.StatusOK, `{"odp_version":"1.0","items":[{"id":"gpu","name":"GPU"}]}`, nil, service.MediaType), nil
+	})
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{CachePartition: "test", HTTPClient: &http.Client{Transport: transport}, ServiceURL: "https://service.example"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	pages := 0
+	for page, err := range client.ContinueSearchOfferingPages(t.Context(), "/odp/offerings/search?cursor=opaque", agent.ContinuationOptions{MaxPages: 1}) {
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Items) != 1 || page.Items[0].ID != "gpu" {
+			t.Fatalf("page = %#v", page)
+		}
+		pages++
+	}
+	if pages != 1 || method != http.MethodGet {
+		t.Fatalf("pages = %d, method = %q", pages, method)
+	}
+	for _, err := range client.ContinueListOfferings(t.Context(), "https://other.example/odp/offerings?cursor=opaque", agent.ContinuationOptions{}) {
+		if err == nil || !strings.Contains(err.Error(), "Service origin") {
+			t.Fatalf("error = %v", err)
+		}
+	}
+}
+
 func newSearchService(t *testing.T, search func(context.Context, *odp.OfferingSearchRequest, service.CatalogRequest) (odp.OfferingPage[odp.Offering], error)) *service.Service {
 	t.Helper()
 	runtime, err := service.New(service.Options{
@@ -459,10 +528,14 @@ func serviceDocument() odp.ServiceDocument {
 }
 
 func documentJSON(operations ...string) string {
+	descriptors := make([]map[string]string, len(operations))
+	for index, operation := range operations {
+		descriptors[index] = map[string]string{"authentication": "not-required", "name": operation}
+	}
 	value := map[string]any{
 		"description": "Example catalog", "http": map[string]string{"endpoint_base": "/odp"},
 		"language": "en", "localizations": []string{"en"}, "name": "Example",
-		"odp_version": "1.0", "operations": map[string]any{"supported": operations},
+		"odp_version": "1.0", "operations": descriptors,
 	}
 	encoded, _ := json.Marshal(value)
 	return string(encoded)

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/payment-protocol.schema.json",
+  "title": "ODP Payment Protocol Descriptor",
+  "type": "object",
+  "required": [
+    "authentication",
+    "name"
+  ],
+  "properties": {
+    "authentication": {
+      "enum": [
+        "not-required",
+        "required"
+      ]
+    },
+    "name": {
+      "enum": [
+        "mpp",
+        "x402"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -10,6 +10,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -50,8 +51,9 @@ type Catalog struct {
 }
 
 type Options struct {
-	Catalog  Catalog
-	Document odp.ServiceDocument
+	Catalog                 Catalog
+	Document                odp.ServiceDocument
+	OperationAuthentication map[odp.Operation]odp.AuthenticationRequirement
 }
 
 type Error struct {
@@ -92,9 +94,22 @@ func New(options Options) (*Service, error) {
 		}
 	}
 	sort.Slice(operations, func(left, right int) bool { return operations[left] < operations[right] })
+	for operation := range options.OperationAuthentication {
+		if !slices.Contains(operations, operation) {
+			return nil, fmt.Errorf("authentication configured for unadvertised ODP operation %s", operation)
+		}
+	}
+	descriptors := make([]odp.OperationDescriptor, len(operations))
+	for index, operation := range operations {
+		authentication := options.OperationAuthentication[operation]
+		if authentication == "" {
+			authentication = odp.AuthenticationNotRequired
+		}
+		descriptors[index] = odp.OperationDescriptor{Authentication: authentication, Name: operation}
+	}
 	document := options.Document
 	document.ODPVersion = odp.Version
-	document.Operations = odp.Operations{Supported: operations}
+	document.Operations = descriptors
 	encoded, err := json.Marshal(document)
 	if err != nil {
 		return nil, fmt.Errorf("encode ODP Service Document: %w", err)

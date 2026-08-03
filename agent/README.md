@@ -20,7 +20,7 @@ if err != nil {
 }
 
 inspection.Capabilities.Operations
-inspection.Capabilities.Onboarding
+inspection.Capabilities.Enrollment
 inspection.Capabilities.Payments
 ```
 
@@ -59,6 +59,10 @@ details, err := client.GetOfferingDetails(ctx, "gpu-h100")
 The same client lists, retrieves, and searches Collections and lists the direct Offerings in a
 Collection. Page methods expose continuations and search refinements when page-level metadata is
 needed.
+
+Short-lived clients can resume a Service-provided continuation with the corresponding
+`ContinueList...` or `ContinueSearch...` item or page method. The client retrieves the opaque
+reference with GET and applies the same-origin, response, redirect, and traversal limits.
 
 Service Documents use a four-hour fallback freshness, Collections use one hour, and Offerings use
 five minutes. Service-provided `Cache-Control` or `Expires` metadata takes precedence. Search

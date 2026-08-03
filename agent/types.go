@@ -27,9 +27,9 @@ const (
 )
 
 type Capabilities struct {
-	Onboarding []odp.Protocol
-	Operations []odp.Operation
-	Payments   []odp.Protocol
+	Enrollment []odp.EnrollmentProtocol
+	Operations []odp.OperationDescriptor
+	Payments   []odp.PaymentProtocol
 }
 
 type Inspection struct {
@@ -133,11 +133,12 @@ type DiscoveredOpenAPIAction struct {
 }
 
 type DiscoveredAction struct {
-	Description string
-	HTTP        *DiscoveredHTTPAction
-	ID          string
-	OpenAPI     *DiscoveredOpenAPIAction
-	Rel         odp.ActionRelation
+	Authentication odp.AuthenticationRequirement
+	Description    string
+	HTTP           *DiscoveredHTTPAction
+	ID             string
+	OpenAPI        *DiscoveredOpenAPIAction
+	Rel            odp.ActionRelation
 }
 
 type OfferingDetails struct {
@@ -156,6 +157,12 @@ type ResolvedAction struct {
 
 type ListOptions struct {
 	Limit          int
+	MaxItems       int
+	MaxPages       int
+	Representation odp.Representation
+}
+
+type ContinuationOptions struct {
 	MaxItems       int
 	MaxPages       int
 	Representation odp.Representation

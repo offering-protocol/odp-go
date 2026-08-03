@@ -5,13 +5,13 @@
   "type": "object",
   "minProperties": 1,
   "properties": {
-    "onboarding": {
+    "enrollment": {
       "type": "array",
       "minItems": 1,
       "maxItems": 1,
       "uniqueItems": true,
       "items": {
-        "const": "aep"
+        "$ref": "enrollment-protocol.schema.json"
       }
     },
     "payments": {
@@ -20,12 +20,73 @@
       "maxItems": 2,
       "uniqueItems": true,
       "items": {
-        "enum": [
-          "mpp",
-          "x402"
-        ]
+        "$ref": "payment-protocol.schema.json"
       }
     }
   },
+  "allOf": [
+    {
+      "properties": {
+        "payments": {
+          "contains": {
+            "properties": {
+              "name": {
+                "const": "mpp"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 0,
+          "maxContains": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "payments": {
+          "contains": {
+            "properties": {
+              "name": {
+                "const": "x402"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          },
+          "minContains": 0,
+          "maxContains": 1
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "payments": {
+            "contains": {
+              "properties": {
+                "authentication": {
+                  "const": "required"
+                }
+              },
+              "required": [
+                "authentication"
+              ]
+            }
+          }
+        },
+        "required": [
+          "payments"
+        ]
+      },
+      "then": {
+        "required": [
+          "enrollment"
+        ]
+      }
+    }
+  ],
   "additionalProperties": false
 }

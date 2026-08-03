@@ -302,22 +302,6 @@ func (value OfferingPage[Item]) MarshalJSON() ([]byte, error) {
 	return encodeAdditional(plain(value), value.Additional)
 }
 
-func (value *Operations) UnmarshalJSON(data []byte) error {
-	type plain Operations
-	var decoded plain
-	additional, err := decodeAdditional(data, &decoded)
-	if err != nil {
-		return err
-	}
-	*value = Operations(decoded)
-	value.Additional = additional
-	return nil
-}
-func (value Operations) MarshalJSON() ([]byte, error) {
-	type plain Operations
-	return encodeAdditional(plain(value), value.Additional)
-}
-
 func (value *HTTPConfiguration) UnmarshalJSON(data []byte) error {
 	type plain HTTPConfiguration
 	var decoded plain

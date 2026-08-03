@@ -221,7 +221,11 @@ func evaluateBaseline(test map[string]json.RawMessage, role string) (bool, bool,
 	operations, operationsErr := requiredField[[]odp.Operation](test, "operations")
 	listResponse, listErr := requiredField[json.RawMessage](test, "list_response")
 	getResponse, getErr := requiredField[json.RawMessage](test, "get_response")
-	document := odp.ServiceDocument{Description: "Conformance Service", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"}, Language: "en", Localizations: []string{"en"}, Name: "Conformance Service", ODPVersion: odp.Version, Operations: odp.Operations{Supported: operations}}
+	descriptors := make([]odp.OperationDescriptor, len(operations))
+	for index, operation := range operations {
+		descriptors[index] = odp.OperationDescriptor{Authentication: odp.AuthenticationNotRequired, Name: operation}
+	}
+	document := odp.ServiceDocument{Description: "Conformance Service", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"}, Language: "en", Localizations: []string{"en"}, Name: "Conformance Service", ODPVersion: odp.Version, Operations: descriptors}
 	encoded, marshalErr := json.Marshal(document)
 	_, documentErr := odp.ParseServiceDocument(encoded)
 	_, pageErr := odp.ParsePage[odp.Offering](listResponse)

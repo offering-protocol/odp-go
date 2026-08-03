@@ -27,10 +27,20 @@ type Options struct {
 }
 
 type ServiceFilters struct {
-	Keywords   []string        `json:"keywords,omitempty"`
-	Onboarding []odp.Protocol  `json:"onboarding,omitempty"`
-	Operations []odp.Operation `json:"operations,omitempty"`
-	Payments   []odp.Protocol  `json:"payments,omitempty"`
+	Enrollment []odp.EnrollmentProtocol `json:"enrollment,omitempty"`
+	Keywords   []string                 `json:"keywords,omitempty"`
+	Operations []OperationFilter        `json:"operations,omitempty"`
+	Payments   []PaymentFilter          `json:"payments,omitempty"`
+}
+
+type OperationFilter struct {
+	Authentication odp.AuthenticationRequirement `json:"authentication,omitempty"`
+	Name           odp.Operation                 `json:"name"`
+}
+
+type PaymentFilter struct {
+	Authentication odp.AuthenticationRequirement `json:"authentication,omitempty"`
+	Name           odp.Protocol                  `json:"name"`
 }
 
 type SearchRequest struct {
@@ -52,21 +62,21 @@ type Service struct {
 	Language      string
 	Localizations []string
 	Name          string
-	Operations    []odp.Operation
+	Operations    []odp.OperationDescriptor
 	Protocols     *odp.ServiceProtocols
 	ServiceOrigin string
 }
 
-type Facet[Value ~string] struct {
+type Facet[Value any] struct {
 	Count int64
 	Value Value
 }
 
 type Facets struct {
 	Keywords   []Facet[string]
-	Onboarding []Facet[odp.Protocol]
-	Operations []Facet[odp.Operation]
-	Payments   []Facet[odp.Protocol]
+	Enrollment []Facet[odp.EnrollmentProtocol]
+	Operations []Facet[odp.OperationDescriptor]
+	Payments   []Facet[odp.PaymentProtocol]
 }
 
 type SearchPage struct {

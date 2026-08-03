@@ -8,6 +8,9 @@
     "items"
   ],
   "properties": {
+    "auth_expands": {
+      "const": true
+    },
     "odp_version": {
       "const": "1.0"
     },

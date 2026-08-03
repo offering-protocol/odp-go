@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/operation-descriptor.schema.json",
+  "title": "ODP Operation Descriptor",
+  "type": "object",
+  "required": [
+    "authentication",
+    "name"
+  ],
+  "properties": {
+    "authentication": {
+      "$ref": "authentication-requirement.schema.json"
+    },
+    "name": {
+      "enum": [
+        "get-collection",
+        "get-offering",
+        "list-collection-offerings",
+        "list-collections",
+        "list-offerings",
+        "search-collections",
+        "search-offerings"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

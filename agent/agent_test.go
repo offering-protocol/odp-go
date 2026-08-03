@@ -14,9 +14,9 @@ import (
 )
 
 const directoryResults = `{"items":[
-  {"description":"Slow catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Slow","operations":["get-offering","list-offerings"],"service_origin":"https://slow.example"},
-  {"description":"Fast catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Fast","operations":["get-offering","list-offerings"],"service_origin":"https://fast.example"},
-  {"description":"Bad catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Bad","operations":["get-offering","list-offerings"],"service_origin":"https://bad.example"}
+  {"description":"Slow catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Slow","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"service_origin":"https://slow.example"},
+  {"description":"Fast catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Fast","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"service_origin":"https://fast.example"},
+  {"description":"Bad catalog","indexed_at":"2026-08-02T00:00:00Z","language":"en","localizations":["en"],"name":"Bad","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"service_origin":"https://bad.example"}
 ]}`
 
 func TestAgentSearchesServicesConcurrentlyInDirectoryOrder(t *testing.T) {

@@ -119,10 +119,10 @@ func (client *ServiceClient) Inspect(ctx context.Context) (Inspection, error) {
 	if err != nil {
 		return Inspection{}, err
 	}
-	capabilities := Capabilities{Operations: append([]odp.Operation(nil), document.Operations.Supported...)}
+	capabilities := Capabilities{Operations: append([]odp.OperationDescriptor(nil), document.Operations...)}
 	if document.Protocols != nil {
-		capabilities.Onboarding = append([]odp.Protocol(nil), document.Protocols.Onboarding...)
-		capabilities.Payments = append([]odp.Protocol(nil), document.Protocols.Payments...)
+		capabilities.Enrollment = append([]odp.EnrollmentProtocol(nil), document.Protocols.Enrollment...)
+		capabilities.Payments = append([]odp.PaymentProtocol(nil), document.Protocols.Payments...)
 	}
 	return Inspection{
 		Capabilities: capabilities, Document: document, FinalURL: result.finalURL,
@@ -148,6 +148,22 @@ func (client *ServiceClient) SearchCollectionPages(ctx context.Context, options 
 	list := ListOptions{Limit: options.Limit, MaxItems: options.MaxItems, MaxPages: options.MaxPages, Representation: options.Representation}
 	body := odp.CollectionSearchRequest{Limit: requestLimit(options.Limit, client.initialPageSize), ODPVersion: odp.Version, ParentID: options.ParentID, Query: options.Query}
 	return client.collectionPages(ctx, odp.OperationSearchCollections, "", list, &body)
+}
+
+func (client *ServiceClient) ContinueListCollections(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Collection, error] {
+	return client.continueCollectionItems(ctx, next, options, false)
+}
+
+func (client *ServiceClient) ContinueListCollectionPages(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Page[odp.Collection], error] {
+	return client.continueCollectionPages(ctx, next, options, false)
+}
+
+func (client *ServiceClient) ContinueSearchCollections(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Collection, error] {
+	return client.continueCollectionItems(ctx, next, options, true)
+}
+
+func (client *ServiceClient) ContinueSearchCollectionPages(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Page[odp.Collection], error] {
+	return client.continueCollectionPages(ctx, next, options, true)
 }
 
 func (client *ServiceClient) GetCollection(ctx context.Context, id string, representation odp.Representation) (odp.Collection, error) {
@@ -192,6 +208,22 @@ func (client *ServiceClient) SearchOfferingPages(ctx context.Context, options Of
 		Refinements: options.Refinements, Sort: options.Sort,
 	}
 	return client.offeringPages(ctx, odp.OperationSearchOfferings, "", list, &body)
+}
+
+func (client *ServiceClient) ContinueListOfferings(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Offering, error] {
+	return client.continueOfferingItems(ctx, next, options, false)
+}
+
+func (client *ServiceClient) ContinueListOfferingPages(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
+	return client.continueOfferingPages(ctx, next, options, false)
+}
+
+func (client *ServiceClient) ContinueSearchOfferings(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.Offering, error] {
+	return client.continueOfferingItems(ctx, next, options, true)
+}
+
+func (client *ServiceClient) ContinueSearchOfferingPages(ctx context.Context, next string, options ContinuationOptions) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
+	return client.continueOfferingPages(ctx, next, options, true)
 }
 
 func (client *ServiceClient) GetOffering(ctx context.Context, id string, representation odp.Representation) (odp.Offering, error) {
@@ -257,6 +289,59 @@ func (client *ServiceClient) collectionItems(ctx context.Context, operation odp.
 	}
 }
 
+func (client *ServiceClient) continueCollectionItems(ctx context.Context, next string, options ContinuationOptions, search bool) iter.Seq2[odp.Collection, error] {
+	return func(yield func(odp.Collection, error) bool) {
+		count := 0
+		for page, err := range client.continueCollectionPages(ctx, next, options, search) {
+			if err != nil {
+				yield(odp.Collection{}, err)
+				return
+			}
+			for _, item := range page.Items {
+				if options.MaxItems != 0 && count >= options.MaxItems {
+					return
+				}
+				count++
+				if !yield(item, nil) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (client *ServiceClient) continueCollectionPages(ctx context.Context, next string, options ContinuationOptions, search bool) iter.Seq2[odp.Page[odp.Collection], error] {
+	return func(yield func(odp.Page[odp.Collection], error) bool) {
+		list := ListOptions{MaxItems: options.MaxItems, MaxPages: options.MaxPages, Representation: options.Representation}
+		if err := validateListOptions(list); err != nil {
+			yield(odp.Page[odp.Collection]{}, err)
+			return
+		}
+		validate := func(data []byte) error {
+			if jsonvalue.Depth(data) > maximumResourceDepth {
+				return errors.New("ODP response exceeds its nesting-depth limit")
+			}
+			_, err := odp.ParsePage[odp.Collection](data)
+			return err
+		}
+		fallback := client.fallbacks.Collection
+		if search {
+			fallback = 0
+		}
+		data, err := client.continueRequest(ctx, next, fallback, validate)
+		if err != nil {
+			yield(odp.Page[odp.Collection]{}, err)
+			return
+		}
+		page, err := odp.ParsePage[odp.Collection](data)
+		if err != nil {
+			yield(odp.Page[odp.Collection]{}, err)
+			return
+		}
+		client.yieldCollectionPages(ctx, page, options.MaxPages, fallback, next, yield)
+	}
+}
+
 func (client *ServiceClient) collectionPages(ctx context.Context, operation odp.Operation, id string, options ListOptions, search *odp.CollectionSearchRequest) iter.Seq2[odp.Page[odp.Collection], error] {
 	return func(yield func(odp.Page[odp.Collection], error) bool) {
 		if err := validateListOptions(options); err != nil {
@@ -277,17 +362,20 @@ func (client *ServiceClient) collectionPages(ctx context.Context, operation odp.
 		if operation == odp.OperationSearchCollections {
 			fallback = 0
 		}
-		client.yieldCollectionPages(ctx, page, options.MaxPages, fallback, yield)
+		client.yieldCollectionPages(ctx, page, options.MaxPages, fallback, "", yield)
 	}
 }
 
-func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp.Page[odp.Collection], maxPages int, fallback time.Duration, yield func(odp.Page[odp.Collection], error) bool) {
+func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp.Page[odp.Collection], maxPages int, fallback time.Duration, initialReference string, yield func(odp.Page[odp.Collection], error) bool) {
 	pages := maxPages
 	if pages == 0 {
 		pages = odp.MaxTraversalPages
 	}
 	page := first
 	visited := make(map[string]struct{})
+	if initialReference != "" {
+		visited[initialReference] = struct{}{}
+	}
 	for count := 0; count < pages; count++ {
 		if !yield(page, nil) || page.Next == "" {
 			return
@@ -341,6 +429,78 @@ func (client *ServiceClient) offeringItems(ctx context.Context, operation odp.Op
 	}
 }
 
+func (client *ServiceClient) continueOfferingItems(ctx context.Context, next string, options ContinuationOptions, search bool) iter.Seq2[odp.Offering, error] {
+	return func(yield func(odp.Offering, error) bool) {
+		count := 0
+		for page, err := range client.continueOfferingPages(ctx, next, options, search) {
+			if err != nil {
+				yield(odp.Offering{}, err)
+				return
+			}
+			for _, item := range page.Items {
+				if options.MaxItems != 0 && count >= options.MaxItems {
+					return
+				}
+				count++
+				if !yield(item, nil) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (client *ServiceClient) continueOfferingPages(ctx context.Context, next string, options ContinuationOptions, search bool) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
+	return func(yield func(odp.OfferingPage[odp.Offering], error) bool) {
+		list := ListOptions{MaxItems: options.MaxItems, MaxPages: options.MaxPages, Representation: options.Representation}
+		if err := validateListOptions(list); err != nil {
+			yield(odp.OfferingPage[odp.Offering]{}, err)
+			return
+		}
+		validate := func(data []byte) error {
+			if jsonvalue.Depth(data) > maximumResourceDepth {
+				return errors.New("ODP response exceeds its nesting-depth limit")
+			}
+			_, err := parseOfferingPage(data, search)
+			return err
+		}
+		fallback := client.fallbacks.Offering
+		if search {
+			fallback = 0
+		}
+		data, err := client.continueRequest(ctx, next, fallback, validate)
+		if err != nil {
+			yield(odp.OfferingPage[odp.Offering]{}, err)
+			return
+		}
+		page, err := parseOfferingPage(data, search)
+		if err != nil {
+			yield(odp.OfferingPage[odp.Offering]{}, err)
+			return
+		}
+		if search && len(page.Refinements) != 0 {
+			yield(odp.OfferingPage[odp.Offering]{}, errors.New("ODP Offering search continuation cannot contain refinements"))
+			return
+		}
+		pages := options.MaxPages
+		if pages == 0 {
+			pages = odp.MaxTraversalPages
+		}
+		load := func(ctx context.Context, reference string) ([]byte, error) {
+			return client.continueRequest(ctx, reference, fallback, validate)
+		}
+		for current, err := range iterateOfferingPages(ctx, page, search, pages, next, load) {
+			if err != nil {
+				yield(odp.OfferingPage[odp.Offering]{}, err)
+				return
+			}
+			if !yield(current, nil) {
+				return
+			}
+		}
+	}
+}
+
 func (client *ServiceClient) offeringPages(ctx context.Context, operation odp.Operation, id string, options ListOptions, search *odp.OfferingSearchRequest) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
 	return func(yield func(odp.OfferingPage[odp.Offering], error) bool) {
 		if err := validateListOptions(options); err != nil {
@@ -375,7 +535,7 @@ func (client *ServiceClient) offeringPages(ctx context.Context, operation odp.Op
 			}
 			return client.continueRequest(ctx, next, fallback, validate)
 		}
-		for current, err := range iterateOfferingPages(ctx, page, operation == odp.OperationSearchOfferings, pages, load) {
+		for current, err := range iterateOfferingPages(ctx, page, operation == odp.OperationSearchOfferings, pages, "", load) {
 			if err != nil {
 				yield(odp.OfferingPage[odp.Offering]{}, err)
 				return
@@ -472,13 +632,16 @@ func parseOfferingPage(data []byte, search bool) (odp.OfferingPage[odp.Offering]
 	if err != nil {
 		return odp.OfferingPage[odp.Offering]{}, err
 	}
-	return odp.OfferingPage[odp.Offering]{Additional: page.Additional, Items: page.Items, Next: page.Next, ODPVersion: page.ODPVersion}, nil
+	return odp.OfferingPage[odp.Offering]{Additional: page.Additional, AuthExpands: page.AuthExpands, Items: page.Items, Next: page.Next, ODPVersion: page.ODPVersion}, nil
 }
 
-func iterateOfferingPages(ctx context.Context, first odp.OfferingPage[odp.Offering], search bool, maximumPages int, load func(context.Context, string) ([]byte, error)) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
+func iterateOfferingPages(ctx context.Context, first odp.OfferingPage[odp.Offering], search bool, maximumPages int, initialReference string, load func(context.Context, string) ([]byte, error)) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
 	return func(yield func(odp.OfferingPage[odp.Offering], error) bool) {
 		page := first
 		visited := make(map[string]struct{})
+		if initialReference != "" {
+			visited[initialReference] = struct{}{}
+		}
 		for count := 0; count < maximumPages; count++ {
 			if !yield(page, nil) || page.Next == "" {
 				return
@@ -522,8 +685,8 @@ func validateListOptions(options ListOptions) error {
 }
 
 func supports(document odp.ServiceDocument, operation odp.Operation) bool {
-	for _, candidate := range document.Operations.Supported {
-		if candidate == operation {
+	for _, candidate := range document.Operations {
+		if candidate.Name == operation {
 			return true
 		}
 	}

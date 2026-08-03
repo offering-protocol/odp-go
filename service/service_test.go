@@ -39,7 +39,7 @@ func staticService(t *testing.T) *service.Service {
 		Collections: []odp.Collection{{ID: "compute", Name: "Compute", ODPVersion: odp.Version}},
 		Offerings: []odp.Offering{
 			{
-				Actions:       []odp.Action{{HTTP: &odp.HTTPActionTarget{Href: "/rent", Method: http.MethodPost}, ID: "rent", Rel: odp.ActionPurchase}},
+				Actions:       []odp.Action{{Authentication: odp.AuthenticationNotRequired, HTTP: &odp.HTTPActionTarget{Href: "/rent", Method: http.MethodPost}, ID: "rent", Rel: odp.ActionPurchase}},
 				Attributes:    map[string]json.RawMessage{"memory": json.RawMessage("80")},
 				CollectionIDs: []string{"compute"},
 				Description:   "Dedicated accelerator",
@@ -88,7 +88,7 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 		odp.OperationListOfferings,
 	}
 	if strings.Join(operations(document), ",") != strings.Join(operationStrings(wantOperations), ",") {
-		t.Fatalf("operations = %v, want %v", document.Operations.Supported, wantOperations)
+		t.Fatalf("operations = %v, want %v", document.Operations, wantOperations)
 	}
 	wellKnown := request(t, runtime, http.MethodGet, "https://service.example/.well-known/odp", nil, nil)
 	if wellKnown.Code != http.StatusOK || wellKnown.Header().Get("Content-Type") != service.MediaType {
@@ -112,6 +112,53 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 	}
 	if _, exists := offering["attributes"]; !exists {
 		t.Fatal("full Offering omits attributes")
+	}
+}
+
+func TestServiceDocumentAdvertisesConfiguredOperationAuthentication(t *testing.T) {
+	catalog, err := service.NewStaticCatalog(service.StaticCatalogOptions{
+		Offerings: []odp.Offering{{ID: "one", Name: "One", ODPVersion: odp.Version}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime, err := service.New(service.Options{
+		Catalog: catalog,
+		Document: odp.ServiceDocument{
+			Description: "Authenticated catalog", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"},
+			Language: "en", Localizations: []string{"en"}, Name: "Authenticated",
+			Protocols: &odp.ServiceProtocols{Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}}},
+		},
+		OperationAuthentication: map[odp.Operation]odp.AuthenticationRequirement{
+			odp.OperationGetOffering: odp.AuthenticationRequired,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	document := runtime.Document()
+	for _, operation := range document.Operations {
+		want := odp.AuthenticationNotRequired
+		if operation.Name == odp.OperationGetOffering {
+			want = odp.AuthenticationRequired
+		}
+		if operation.Authentication != want {
+			t.Fatalf("authentication for %s = %q, want %q", operation.Name, operation.Authentication, want)
+		}
+	}
+
+	_, err = service.New(service.Options{
+		Catalog: catalog,
+		Document: odp.ServiceDocument{
+			Description: "Catalog", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"},
+			Language: "en", Localizations: []string{"en"}, Name: "Example",
+		},
+		OperationAuthentication: map[odp.Operation]odp.AuthenticationRequirement{
+			odp.OperationSearchOfferings: odp.AuthenticationRequired,
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unadvertised") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
@@ -258,7 +305,11 @@ func TestStaticCatalogRejectsInvalidRelationships(t *testing.T) {
 }
 
 func operations(document odp.ServiceDocument) []string {
-	return operationStrings(document.Operations.Supported)
+	values := make([]odp.Operation, len(document.Operations))
+	for index, descriptor := range document.Operations {
+		values[index] = descriptor.Name
+	}
+	return operationStrings(values)
 }
 
 func operationStrings(values []odp.Operation) []string {

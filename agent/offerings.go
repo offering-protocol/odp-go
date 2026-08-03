@@ -94,7 +94,7 @@ func normalizeActions(actions []odp.Action, serviceOrigin string) ([]DiscoveredA
 			}
 			continue
 		}
-		discovered := DiscoveredAction{Description: action.Description, ID: action.ID, Rel: action.Rel}
+		discovered := DiscoveredAction{Authentication: action.Authentication, Description: action.Description, ID: action.ID, Rel: action.Rel}
 		if action.HTTP != nil {
 			target, err := resolveHTTPReference(action.HTTP.Href, serviceOrigin)
 			if err != nil {
