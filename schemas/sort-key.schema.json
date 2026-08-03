@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/sort-key.schema.json",
+  "title": "ODP Sort Key",
+  "type": "object",
+  "required": [
+    "filter_id",
+    "direction",
+    "missing"
+  ],
+  "properties": {
+    "filter_id": {
+      "$ref": "capability-identifier.schema.json"
+    },
+    "direction": {
+      "enum": [
+        "ascending",
+        "descending"
+      ]
+    },
+    "missing": {
+      "enum": [
+        "first",
+        "last"
+      ]
+    }
+  }
+}

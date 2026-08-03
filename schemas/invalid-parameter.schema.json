@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/invalid-parameter.schema.json",
+  "title": "ODP invalid parameter",
+  "type": "object",
+  "required": [
+    "in",
+    "name",
+    "reason"
+  ],
+  "properties": {
+    "in": {
+      "enum": [
+        "query",
+        "body",
+        "header",
+        "path"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 256
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "in": {
+            "const": "body"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "name": {
+            "pattern": "^(?:|/(?:[^~/]|~[01])*)*$"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "name": {
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

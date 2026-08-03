@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/price-preview.schema.json",
+  "title": "ODP Price Preview",
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "free"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "amount",
+        "currency"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "fixed",
+            "starting_at"
+          ]
+        },
+        "amount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "currency": {
+          "$ref": "#/$defs/currency"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "minimum",
+        "maximum",
+        "currency"
+      ],
+      "properties": {
+        "type": {
+          "const": "range"
+        },
+        "minimum": {
+          "$ref": "#/$defs/decimal"
+        },
+        "maximum": {
+          "$ref": "#/$defs/decimal"
+        },
+        "currency": {
+          "$ref": "#/$defs/currency"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type",
+        "amount",
+        "currency",
+        "unit"
+      ],
+      "properties": {
+        "type": {
+          "const": "metered"
+        },
+        "amount": {
+          "$ref": "#/$defs/decimal"
+        },
+        "currency": {
+          "$ref": "#/$defs/currency"
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "const": "quote"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "not": {
+            "enum": [
+              "free",
+              "fixed",
+              "range",
+              "starting_at",
+              "metered",
+              "quote"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

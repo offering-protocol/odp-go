@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/top-level-document.schema.json",
+  "title": "ODP top-level document",
+  "description": "The version-bearing envelope shared by top-level ODP request and response documents.",
+  "type": "object",
+  "required": [
+    "odp_version"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "odp_version": {
+      "$ref": "protocol-version.schema.json"
+    }
+  }
+}

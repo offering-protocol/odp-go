@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/openapi-action-target.schema.json",
+  "title": "ODP OpenAPI Action target",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "url",
+    "operation_id"
+  ],
+  "properties": {
+    "url": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  }
+}

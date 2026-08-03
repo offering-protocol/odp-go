@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/filter-unit.schema.json",
+  "title": "ODP filter unit",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "system",
+        "code"
+      ],
+      "properties": {
+        "system": {
+          "const": "ucum"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "system",
+        "code",
+        "title"
+      ],
+      "properties": {
+        "system": {
+          "const": "service"
+        },
+        "code": {
+          "$ref": "capability-identifier.schema.json"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    }
+  ]
+}

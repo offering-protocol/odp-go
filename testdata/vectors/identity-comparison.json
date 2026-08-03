@@ -1,0 +1,71 @@
+{
+  "id": "identity-comparison",
+  "title": "Structured resource identity comparison",
+  "description": "Agents compare Service origin, resource type, and local identifier without using the resource URL.",
+  "drafts": [
+    "draft-kavian-offering-discovery-protocol-00"
+  ],
+  "category": "identity",
+  "applies_to": [
+    "agent"
+  ],
+  "subject": "identity-comparison",
+  "cases": [
+    {
+      "name": "same-tuple",
+      "left": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "123"
+      },
+      "right": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "123"
+      },
+      "same_identity": true
+    },
+    {
+      "name": "same-local-id-different-resource-type",
+      "left": {
+        "service": "https://market.example",
+        "type": "collection",
+        "id": "123"
+      },
+      "right": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "123"
+      },
+      "same_identity": false
+    },
+    {
+      "name": "same-local-id-different-service",
+      "left": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "123"
+      },
+      "right": {
+        "service": "https://other.example",
+        "type": "offering",
+        "id": "123"
+      },
+      "same_identity": false
+    },
+    {
+      "name": "case-sensitive-local-id",
+      "left": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "ABC"
+      },
+      "right": {
+        "service": "https://market.example",
+        "type": "offering",
+        "id": "abc"
+      },
+      "same_identity": false
+    }
+  ]
+}

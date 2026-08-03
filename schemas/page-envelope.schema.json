@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/page-envelope.schema.json",
+  "title": "ODP page envelope",
+  "type": "object",
+  "required": [
+    "odp_version",
+    "items"
+  ],
+  "properties": {
+    "odp_version": {
+      "const": "1.0"
+    },
+    "items": {
+      "type": "array"
+    },
+    "next": {
+      "$ref": "resource-reference.schema.json"
+    }
+  }
+}

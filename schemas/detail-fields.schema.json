@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/detail-fields.schema.json",
+  "title": "ODP detail fields",
+  "description": "An exhaustive bounded list of fields present in a Full Representation and omitted from a Terse Representation.",
+  "type": "array",
+  "minItems": 1,
+  "maxItems": 32,
+  "uniqueItems": true,
+  "items": {
+    "type": "string",
+    "minLength": 1,
+    "maxLength": 256,
+    "pattern": "^(?:/(?:[\\x20-\\x2E\\x30-\\x7D]|~[01])*)+$"
+  }
+}

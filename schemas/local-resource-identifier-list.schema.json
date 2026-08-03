@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/local-resource-identifier-list.schema.json",
+  "title": "ODP local resource identifier list",
+  "type": "array",
+  "uniqueItems": true,
+  "items": {
+    "$ref": "local-resource-identifier.schema.json"
+  }
+}

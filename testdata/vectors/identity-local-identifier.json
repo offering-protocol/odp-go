@@ -1,0 +1,56 @@
+{
+  "id": "local-identifier",
+  "title": "Service-managed local resource identifiers",
+  "description": "Local identifiers are bounded, path-safe ASCII strings selected by the Service.",
+  "drafts": [
+    "draft-kavian-offering-discovery-protocol-00"
+  ],
+  "category": "identity",
+  "applies_to": [
+    "agent",
+    "service"
+  ],
+  "subject": "local-identifier",
+  "cases": [
+    {
+      "name": "service-database-key",
+      "value": "4821",
+      "valid": true
+    },
+    {
+      "name": "service-structured-value-remains-opaque",
+      "value": "catalog.Offering~4821",
+      "valid": true
+    },
+    {
+      "name": "single-dot",
+      "value": ".",
+      "valid": false
+    },
+    {
+      "name": "double-dot",
+      "value": "..",
+      "valid": false
+    },
+    {
+      "name": "unicode-identifier",
+      "value": "商品-東京-42",
+      "valid": false
+    },
+    {
+      "name": "empty-identifier",
+      "value": "",
+      "valid": false
+    },
+    {
+      "name": "control-character",
+      "value": "offering\n42",
+      "valid": false
+    },
+    {
+      "name": "identifier-over-128-characters",
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": false
+    }
+  ]
+}

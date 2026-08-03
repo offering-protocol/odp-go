@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/refinement-group.schema.json",
+  "title": "ODP Refinement Group",
+  "type": "object",
+  "required": [
+    "filter_id",
+    "values"
+  ],
+  "properties": {
+    "filter_id": {
+      "$ref": "capability-identifier.schema.json"
+    },
+    "values": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "refinement-bucket.schema.json"
+      }
+    }
+  }
+}

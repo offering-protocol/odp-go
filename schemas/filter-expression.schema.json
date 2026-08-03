@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/filter-expression.schema.json",
+  "title": "ODP Filter Expression",
+  "type": "object",
+  "required": [
+    "id",
+    "operator",
+    "value"
+  ],
+  "properties": {
+    "id": {
+      "$ref": "capability-identifier.schema.json"
+    },
+    "operator": {
+      "$ref": "filter-operator.schema.json"
+    },
+    "value": {
+      "oneOf": [
+        {
+          "type": [
+            "string",
+            "boolean",
+            "integer",
+            "number"
+          ]
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 100,
+          "uniqueItems": true,
+          "items": {
+            "type": [
+              "string",
+              "boolean",
+              "integer",
+              "number"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

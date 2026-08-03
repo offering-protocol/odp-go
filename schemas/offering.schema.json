@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/offering.schema.json",
+  "title": "ODP Full Offering Representation",
+  "type": "object",
+  "required": [
+    "odp_version",
+    "id",
+    "name"
+  ],
+  "properties": {
+    "odp_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "$ref": "local-resource-identifier.schema.json"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "language": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 35
+    },
+    "localizations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 35
+      }
+    },
+    "web_url": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "collection_ids": {
+      "allOf": [
+        {
+          "$ref": "local-resource-identifier-list.schema.json"
+        },
+        {
+          "minItems": 1
+        }
+      ]
+    },
+    "price": {
+      "$ref": "price-preview.schema.json"
+    },
+    "schema": {
+      "$ref": "attribute-schema-reference.schema.json"
+    },
+    "attributes": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "action.schema.json"
+      }
+    }
+  },
+  "dependentRequired": {
+    "attributes": [
+      "schema"
+    ]
+  }
+}

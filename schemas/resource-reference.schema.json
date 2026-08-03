@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/resource-reference.schema.json",
+  "title": "ODP resource reference",
+  "description": "An origin-relative absolute-path reference or an absolute HTTPS URL, with loopback HTTP allowed for development.",
+  "type": "string",
+  "format": "uri-reference",
+  "anyOf": [
+    {
+      "pattern": "^/(?!/)[^#]*$"
+    },
+    {
+      "pattern": "^https://(?![^/?#]*@)[^#]+$"
+    },
+    {
+      "pattern": "^http://(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(?::[0-9]+)?(?:/[^#]*)?$"
+    }
+  ]
+}
