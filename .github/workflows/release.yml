@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check out ODP specifications
+        uses: actions/checkout@v7
+        with:
+          repository: offering-protocol/odp-specs
+          path: .conformance/odp-specs
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: 1.25.x
+
+      - name: Verify release
+        run: make spec-sync verify consumer-smoke conformance
+        env:
+          ODP_GO_VERSION: ${{ github.ref_name }}
+          ODP_SPECS_DIR: .conformance/odp-specs
+
+      - name: Publish GitHub release
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          .conformance/reports/agent.json#odp-go-agent-conformance.json
+          .conformance/reports/service.json#odp-go-service-conformance.json
+          --generate-notes
+          --title "ODP Go $GITHUB_REF_NAME"
+          --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

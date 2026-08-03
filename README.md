@@ -158,6 +158,24 @@ make verify
 When an `odp-specs` checkout is available, verify the bundled schemas and conformance vectors with
 `ODP_SPECS_DIR=/path/to/odp-specs make spec-sync`. Continuous integration runs both gates.
 
+Generate Agent and Service conformance reports with:
+
+```sh
+ODP_SPECS_DIR=/path/to/odp-specs make conformance
+```
+
+The language-neutral harness executes the module's public behavior and writes release evidence to
+`.conformance/reports/`.
+
+Run the Go Agent against the Node.js reference Service with:
+
+```sh
+ODP_NODE_DIR=/path/to/odp-node make interoperability
+```
+
+Version tags publish a GitHub release after the complete verification, clean consumer-module, and
+shared conformance gates pass. Each release includes its Agent and Service conformance reports.
+
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for the contributor workflow and
 [`odp-specs`](https://github.com/offering-protocol/odp-specs) for the normative draft, schemas,
 examples, and test vectors.

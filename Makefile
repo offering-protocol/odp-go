@@ -1,4 +1,13 @@
-.PHONY: format format-check spec-sync test tidy-check verify
+.PHONY: conformance consumer-smoke format format-check interoperability spec-sync test tidy-check verify
+
+conformance:
+	./scripts/run-conformance.sh
+
+consumer-smoke:
+	./scripts/verify-consumer.sh
+
+interoperability:
+	./scripts/run-node-interoperability.sh
 
 format:
 	gofmt -w $$(find . -name '*.go' -not -path './.git/*')
