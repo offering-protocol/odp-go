@@ -42,6 +42,136 @@
       }
     },
     {
+      "name": "language-tag-with-unicode-extension",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "de-DE-u-co-phonebk",
+        "localizations": [
+          "de-DE-u-co-phonebk"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "grandfathered-language-tag",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "i-klingon",
+        "localizations": [
+          "i-klingon"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "private-use-language-tag-with-repeated-subtags",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "x-a-a",
+        "localizations": [
+          "x-a-a"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "incomplete-language-extension",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en-a",
+        "localizations": [
+          "en-a"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "duplicate-language-variant",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "sl-rozaj-rozaj",
+        "localizations": [
+          "sl-rozaj-rozaj"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
       "name": "operation-authentication-is-required",
       "valid": false,
       "document": {

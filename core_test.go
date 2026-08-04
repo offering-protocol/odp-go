@@ -107,6 +107,32 @@ func TestParseRejectsTrailingJSON(t *testing.T) {
 	}
 }
 
+func TestLocalizedResourcesRejectInvalidLanguageTags(t *testing.T) {
+	tests := []struct {
+		name  string
+		parse func([]byte) error
+		value string
+	}{
+		{
+			name:  "collection with incomplete extension",
+			parse: func(data []byte) error { _, err := odp.ParseCollection(data); return err },
+			value: `{"odp_version":"1.0","id":"compute","name":"Compute","language":"en-a","localizations":["en-a"]}`,
+		},
+		{
+			name:  "offering with repeated variant",
+			parse: func(data []byte) error { _, err := odp.ParseOffering(data); return err },
+			value: `{"odp_version":"1.0","id":"gpu","name":"GPU","language":"sl-rozaj-rozaj","localizations":["sl-rozaj-rozaj"]}`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := test.parse([]byte(test.value)); err == nil {
+				t.Fatal("parser accepted an invalid language tag")
+			}
+		})
+	}
+}
+
 func TestProtocolParsers(t *testing.T) {
 	tests := []struct {
 		name  string
