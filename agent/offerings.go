@@ -11,11 +11,15 @@ import (
 )
 
 func (client *ServiceClient) GetOfferingDetails(ctx context.Context, id string) (OfferingDetails, error) {
-	offering, err := client.GetOffering(ctx, id, odp.RepresentationFull)
+	offering, inspection, err := client.getOffering(ctx, id, odp.RepresentationFull)
 	if err != nil {
 		return OfferingDetails{}, err
 	}
-	actions, issues := normalizeActions(offering.Actions, client.serviceOrigin)
+	serviceOpenAPIURL := ""
+	if inspection.Document.HTTP.OpenAPI != nil {
+		serviceOpenAPIURL = inspection.Document.HTTP.OpenAPI.URL
+	}
+	actions, issues := normalizeActions(offering.Actions, client.serviceOrigin, serviceOpenAPIURL)
 	details := OfferingDetails{Actions: actions, Issues: issues, Offering: offering}
 	if offering.Schema == nil {
 		return details, nil
@@ -78,7 +82,7 @@ func (client *ServiceClient) ResolveAction(ctx context.Context, offeringID, acti
 	return result, err
 }
 
-func normalizeActions(actions []odp.Action, serviceOrigin string) ([]DiscoveredAction, []OfferingIssue) {
+func normalizeActions(actions []odp.Action, serviceOrigin, serviceOpenAPIURL string) ([]DiscoveredAction, []OfferingIssue) {
 	counts := map[string]int{}
 	for _, action := range actions {
 		counts[action.ID]++
@@ -103,7 +107,15 @@ func normalizeActions(actions []odp.Action, serviceOrigin string) ([]DiscoveredA
 			}
 			discovered.HTTP = &DiscoveredHTTPAction{Method: action.HTTP.Method, Request: action.HTTP.Request, ResponseContentTypes: append([]string(nil), action.HTTP.ResponseContentTypes...), URL: target}
 		} else if action.OpenAPI != nil {
-			target, err := resolveHTTPSReference(action.OpenAPI.URL, serviceOrigin)
+			openAPIURL := action.OpenAPI.URL
+			if openAPIURL == "" {
+				openAPIURL = serviceOpenAPIURL
+			}
+			if openAPIURL == "" {
+				issues = append(issues, OfferingIssue{ActionID: action.ID, Message: "OpenAPI Action has no OpenAPI document URL", Scope: OfferingIssueAction})
+				continue
+			}
+			target, err := resolveHTTPSReference(openAPIURL, serviceOrigin)
 			if err != nil {
 				issues = append(issues, OfferingIssue{ActionID: action.ID, Message: err.Error(), Scope: OfferingIssueAction})
 				continue

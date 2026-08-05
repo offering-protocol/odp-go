@@ -107,10 +107,12 @@ if err != nil {
 ```
 
 `ResolveAction` returns an HTTP Action's request schema or an OpenAPI 3.1 document and its uniquely
-selected operation. It does not invoke the Action. Supporting schemas and OpenAPI documents use a
-separate anonymous HTTP client and must use HTTPS. Supply `SupportingHTTPClient` only when those
-requests need custom network transport; keep it free of Service credentials. Attribute Schemas use
-a 24-hour fallback freshness, while OpenAPI documents require explicit HTTP freshness metadata.
+selected operation. It does not invoke the Action. An OpenAPI Action may omit its URL when the
+Service Document declares `http.openapi.url`; an Action URL overrides that Service-wide default.
+Supporting schemas and OpenAPI documents use a separate anonymous HTTP client and must use HTTPS.
+Supply `SupportingHTTPClient` only when those requests need custom network transport; keep it free
+of Service credentials. Attribute Schemas use a 24-hour fallback freshness, while OpenAPI documents
+require explicit HTTP freshness metadata.
 
 ## Discover Offerings across Services
 

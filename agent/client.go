@@ -227,11 +227,21 @@ func (client *ServiceClient) ContinueSearchOfferingPages(ctx context.Context, ne
 }
 
 func (client *ServiceClient) GetOffering(ctx context.Context, id string, representation odp.Representation) (odp.Offering, error) {
-	data, err := client.get(ctx, odp.OperationGetOffering, id, representation, client.fallbacks.Offering)
+	offering, _, err := client.getOffering(ctx, id, representation)
+	return offering, err
+}
+
+func (client *ServiceClient) getOffering(ctx context.Context, id string, representation odp.Representation) (odp.Offering, Inspection, error) {
+	inspection, err := client.Inspect(ctx)
 	if err != nil {
-		return odp.Offering{}, err
+		return odp.Offering{}, Inspection{}, err
 	}
-	return odp.ParseOffering(data)
+	data, err := client.getWithInspection(ctx, inspection, odp.OperationGetOffering, id, representation, client.fallbacks.Offering)
+	if err != nil {
+		return odp.Offering{}, Inspection{}, err
+	}
+	offering, err := odp.ParseOffering(data)
+	return offering, inspection, err
 }
 
 func (client *ServiceClient) get(ctx context.Context, operation odp.Operation, id string, representation odp.Representation, fallback time.Duration) ([]byte, error) {
@@ -239,6 +249,10 @@ func (client *ServiceClient) get(ctx context.Context, operation odp.Operation, i
 	if err != nil {
 		return nil, err
 	}
+	return client.getWithInspection(ctx, inspection, operation, id, representation, fallback)
+}
+
+func (client *ServiceClient) getWithInspection(ctx context.Context, inspection Inspection, operation odp.Operation, id string, representation odp.Representation, fallback time.Duration) ([]byte, error) {
 	if !supports(inspection.Document, operation) {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedOperation, operation)
 	}
