@@ -30,8 +30,15 @@ if err != nil {
 odpService, err := service.New(service.Options{
 	Catalog: catalog,
 	Document: odp.ServiceDocument{
+		Branding: &odp.ServiceBranding{
+			Icon: odp.ServiceBrandingImage{Source: "/branding/icon.svg", Type: odp.ServiceBrandingSVG},
+			Logo: odp.ServiceBrandingImage{Source: "/branding/logo.svg", Type: odp.ServiceBrandingSVG},
+		},
 		Description:   "On-demand compute resources",
-		HTTP:          odp.HTTPConfiguration{EndpointBase: "/odp"},
+		HTTP: odp.HTTPConfiguration{
+			EndpointBase: "/odp",
+			OpenAPI:      &odp.ServiceOpenAPI{URL: "/openapi.json"},
+		},
 		Language:      "en",
 		Localizations: []string{"en"},
 		Name:          "Example Compute",
@@ -44,6 +51,12 @@ odpService, err := service.New(service.Options{
 	},
 })
 ```
+
+Branding is optional. When present, it contains both a square icon and a wide logo as SVG, PNG, or
+WebP resources. Raster icons are square and at least 200 by 200 pixels; raster logos use a 4:1
+aspect ratio and are at least 400 by 100 pixels. SVG resources use the corresponding aspect ratio.
+The optional Service-wide OpenAPI document is inherited by Offering Actions that identify only an
+operation ID.
 
 Mount `odpService` at `/.well-known/odp` and its configured endpoint base. Operations default to
 `not-required`; `OperationAuthentication` advertises different access requirements. Authentication,

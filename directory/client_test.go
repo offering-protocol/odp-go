@@ -85,7 +85,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if target != "https://directory.offeringprotocol.org/v1/services/search" {
+	if target != "https://api.inflowpay.ai/v1/services/search" {
 		t.Fatalf("target = %q", target)
 	}
 	if method != http.MethodPost {
@@ -119,7 +119,7 @@ func TestSearchPagesUsesSandboxOnlyWhenSelected(t *testing.T) {
 	if _, err := first(value.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err != nil {
 		t.Fatal(err)
 	}
-	if target != "https://sandbox.offeringprotocol.org/v1/services/search" {
+	if target != "https://sandbox.inflowpay.ai/v1/services/search" {
 		t.Fatalf("target = %q", target)
 	}
 }
@@ -161,7 +161,7 @@ func TestSuggestServicesUsesSelectedEnvironment(t *testing.T) {
 	if strings.Join(values, ",") != "gpu,gpu compute" {
 		t.Fatalf("suggestions = %v", values)
 	}
-	if target != "https://sandbox.offeringprotocol.org/v1/services/suggestions?prefix=gp&limit=5" {
+	if target != "https://sandbox.inflowpay.ai/v1/services/suggestions?prefix=gp&limit=5" {
 		t.Fatalf("target = %q", target)
 	}
 }

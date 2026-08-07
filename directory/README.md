@@ -4,8 +4,8 @@ Package `directory` searches the one canonical ODP directory for candidate Servi
 search Service catalogs. After discovery, an Agent inspects each result's live ODP document and
 queries that Service's Collections and Offerings.
 
-The production origin is fixed at `https://directory.offeringprotocol.org`. Select `Sandbox` to use
-the fixed `https://sandbox.offeringprotocol.org` environment. Callers cannot configure another
+The production origin is fixed at `https://api.inflowpay.ai`. Select `Sandbox` to use
+the fixed `https://sandbox.inflowpay.ai` environment. Callers cannot configure another
 origin.
 
 ## Search Services

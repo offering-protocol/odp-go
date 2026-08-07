@@ -5,7 +5,6 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "url",
     "operation_id"
   ],
   "properties": {

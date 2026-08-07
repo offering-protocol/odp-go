@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/service-branding-image.schema.json",
+  "title": "ODP Service branding image",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "src",
+    "type"
+  ],
+  "properties": {
+    "src": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "image/png",
+        "image/svg+xml",
+        "image/webp"
+      ]
+    }
+  }
+}

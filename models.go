@@ -115,6 +115,7 @@ const (
 type HTTPConfiguration struct {
 	Additional   AdditionalMembers `json:"-"`
 	EndpointBase string            `json:"endpoint_base"`
+	OpenAPI      *ServiceOpenAPI   `json:"openapi,omitempty"`
 }
 
 type CapabilityLink struct {
@@ -187,8 +188,31 @@ type SearchCapabilities struct {
 	Sorts      *SortCapabilitySource   `json:"sorts,omitempty"`
 }
 
+type ServiceBrandingImageType string
+
+const (
+	ServiceBrandingPNG  ServiceBrandingImageType = "image/png"
+	ServiceBrandingSVG  ServiceBrandingImageType = "image/svg+xml"
+	ServiceBrandingWebP ServiceBrandingImageType = "image/webp"
+)
+
+type ServiceBrandingImage struct {
+	Source string                   `json:"src"`
+	Type   ServiceBrandingImageType `json:"type"`
+}
+
+type ServiceBranding struct {
+	Icon ServiceBrandingImage `json:"icon"`
+	Logo ServiceBrandingImage `json:"logo"`
+}
+
+type ServiceOpenAPI struct {
+	URL string `json:"url"`
+}
+
 type ServiceDocument struct {
 	Additional         AdditionalMembers     `json:"-"`
+	Branding           *ServiceBranding      `json:"branding,omitempty"`
 	Description        string                `json:"description"`
 	HTTP               HTTPConfiguration     `json:"http"`
 	Keywords           []string              `json:"keywords,omitempty"`
@@ -244,7 +268,7 @@ type HTTPActionTarget struct {
 
 type OpenAPIActionTarget struct {
 	OperationID string `json:"operation_id"`
-	URL         string `json:"url"`
+	URL         string `json:"url,omitempty"`
 }
 
 type Action struct {

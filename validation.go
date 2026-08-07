@@ -257,6 +257,42 @@ func issue(path, keyword, message string) ValidationIssue {
 	return ValidationIssue{Keyword: keyword, Message: message, Params: map[string]any{}, Path: path}
 }
 
+func validLanguageTag(value string) bool {
+	if _, err := language.Parse(value); err != nil {
+		return false
+	}
+
+	subtags := strings.Split(strings.ToLower(value), "-")
+	if subtags[0] == "x" {
+		return true
+	}
+
+	variants := make(map[string]struct{})
+	extensions := make(map[string]struct{})
+	inExtension := false
+	for _, subtag := range subtags[1:] {
+		if len(subtag) == 1 {
+			inExtension = true
+			if subtag == "x" {
+				break
+			}
+			if _, exists := extensions[subtag]; exists {
+				return false
+			}
+			extensions[subtag] = struct{}{}
+			continue
+		}
+		if inExtension || !((len(subtag) >= 5 && len(subtag) <= 8) || (len(subtag) == 4 && subtag[0] >= '0' && subtag[0] <= '9')) {
+			continue
+		}
+		if _, exists := variants[subtag]; exists {
+			return false
+		}
+		variants[subtag] = struct{}{}
+	}
+	return true
+}
+
 func serviceDocumentIssues(value ServiceDocument) []ValidationIssue {
 	issues := make([]ValidationIssue, 0)
 	if _, ok := value.Additional["id"]; ok {
@@ -265,13 +301,13 @@ func serviceDocumentIssues(value ServiceDocument) []ValidationIssue {
 	if _, ok := value.Additional["web_url"]; ok {
 		issues = append(issues, issue("/web_url", "prohibited", "must not appear in a Service Document"))
 	}
-	if _, err := language.Parse(value.Language); err != nil {
+	if !validLanguageTag(value.Language) {
 		issues = append(issues, issue("/language", "language-tag", "must be a language tag"))
 	}
 	folded := make(map[string]struct{}, len(value.Localizations))
 	containsDefault := false
 	for _, tag := range value.Localizations {
-		if _, err := language.Parse(tag); err != nil {
+		if !validLanguageTag(tag) {
 			issues = append(issues, issue("/localizations", "language-tag", "must contain only language tags"))
 			break
 		}
@@ -315,8 +351,15 @@ func localizedIssues[Value localizedRepresentation](value Value) []ValidationIss
 		localizations = typed.Localizations
 	}
 	issues := make([]ValidationIssue, 0)
+	if representationLanguage != "" && !validLanguageTag(representationLanguage) {
+		issues = append(issues, issue("/language", "language-tag", "must be a language tag"))
+	}
 	folded := make(map[string]struct{}, len(localizations))
 	for _, tag := range localizations {
+		if !validLanguageTag(tag) {
+			issues = append(issues, issue("/localizations", "language-tag", "must contain only language tags"))
+			break
+		}
 		key := strings.ToLower(tag)
 		if _, exists := folded[key]; exists {
 			issues = append(issues, issue("/localizations", "unique-language-tag", "must be unique without regard to case"))

@@ -17,8 +17,8 @@ const (
 )
 
 const (
-	productionOrigin = "https://directory.offeringprotocol.org"
-	sandboxOrigin    = "https://sandbox.offeringprotocol.org"
+	productionOrigin = "https://api.inflowpay.ai"
+	sandboxOrigin    = "https://sandbox.inflowpay.ai"
 )
 
 type Options struct {

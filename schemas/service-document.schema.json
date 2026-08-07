@@ -53,6 +53,9 @@
         "pattern": "^\\S(?:[\\s\\S]*\\S)?$"
       }
     },
+    "branding": {
+      "$ref": "service-branding.schema.json"
+    },
     "operations": {
       "type": "array",
       "minItems": 2,
@@ -97,6 +100,9 @@
           "type": "string",
           "maxLength": 2048,
           "pattern": "^/(?!/)[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$"
+        },
+        "openapi": {
+          "$ref": "service-openapi.schema.json"
         }
       }
     },
