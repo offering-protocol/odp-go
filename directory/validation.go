@@ -345,6 +345,9 @@ func parseSuggestions(data []byte) ([]string, error) {
 	if err := json.Unmarshal(object["items"], &items); err != nil {
 		return nil, errors.New("suggestions are invalid")
 	}
+	if items != nil && len(items) == 0 {
+		return items, nil
+	}
 	return uniqueText(items, "suggestions", 25, 128)
 }
 
