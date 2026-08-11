@@ -166,6 +166,19 @@ func TestSuggestServicesUsesSelectedEnvironment(t *testing.T) {
 	}
 }
 
+func TestSuggestServicesAcceptsEmptyResult(t *testing.T) {
+	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		return response(http.StatusOK, `{"items":[]}`, nil), nil
+	})
+	values, err := client(t, transport, directory.Production).SuggestServices(t.Context(), directory.SuggestionRequest{Prefix: "unmatched"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(values) != 0 {
+		t.Fatalf("suggestions = %v", values)
+	}
+}
+
 func TestSearchRejectsCrossOriginContinuation(t *testing.T) {
 	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return response(http.StatusOK, `{"items":[],"next":"https://other.example/search"}`, nil), nil
