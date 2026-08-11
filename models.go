@@ -83,9 +83,43 @@ type EnrollmentProtocol struct {
 	Name Protocol `json:"name"`
 }
 
+type PaymentOption string
+
+const (
+	PaymentOptionAlgorand  PaymentOption = "algorand"
+	PaymentOptionAptos     PaymentOption = "aptos"
+	PaymentOptionArbitrum  PaymentOption = "arbitrum"
+	PaymentOptionAvalanche PaymentOption = "avalanche"
+	PaymentOptionBase      PaymentOption = "base"
+	PaymentOptionCard      PaymentOption = "card"
+	PaymentOptionEthereum  PaymentOption = "ethereum"
+	PaymentOptionHedera    PaymentOption = "hedera"
+	PaymentOptionInflow    PaymentOption = "inflow"
+	PaymentOptionLightning PaymentOption = "lightning"
+	PaymentOptionPolygon   PaymentOption = "polygon"
+	PaymentOptionSolana    PaymentOption = "solana"
+	PaymentOptionStellar   PaymentOption = "stellar"
+	PaymentOptionStripe    PaymentOption = "stripe"
+	PaymentOptionTempo     PaymentOption = "tempo"
+	PaymentOptionTON       PaymentOption = "ton"
+)
+
+func IsPaymentOption(value PaymentOption) bool {
+	switch value {
+	case PaymentOptionAlgorand, PaymentOptionAptos, PaymentOptionArbitrum, PaymentOptionAvalanche,
+		PaymentOptionBase, PaymentOptionCard, PaymentOptionEthereum, PaymentOptionHedera,
+		PaymentOptionInflow, PaymentOptionLightning, PaymentOptionPolygon, PaymentOptionSolana,
+		PaymentOptionStellar, PaymentOptionStripe, PaymentOptionTempo, PaymentOptionTON:
+		return true
+	default:
+		return false
+	}
+}
+
 type PaymentProtocol struct {
 	Authentication AuthenticationRequirement `json:"authentication"`
 	Name           Protocol                  `json:"name"`
+	Options        []PaymentOption           `json:"options,omitempty"`
 }
 
 type FilterType string

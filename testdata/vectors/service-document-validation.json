@@ -406,11 +406,20 @@
           "payments": [
             {
               "authentication": "not-required",
-              "name": "mpp"
+              "name": "mpp",
+              "options": [
+                "card",
+                "inflow",
+                "solana"
+              ]
             },
             {
               "authentication": "not-required",
-              "name": "x402"
+              "name": "x402",
+              "options": [
+                "base",
+                "solana"
+              ]
             }
           ],
           "enrollment": [

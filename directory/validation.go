@@ -181,11 +181,18 @@ func parseFacets(data []byte) (Facets, error) {
 	if err != nil {
 		return Facets{}, err
 	}
+	paymentOptions, err := parseDescriptorFacet(object["payment_options"], "payment_options", parsePaymentOptionFacet)
+	if err != nil {
+		return Facets{}, err
+	}
 	payments, err := parseDescriptorFacet(object["payments"], "payments", parsePayment)
 	if err != nil {
 		return Facets{}, err
 	}
-	return Facets{Enrollment: enrollment, Keywords: keywords, Operations: operationFacets, Payments: payments}, nil
+	return Facets{
+		Enrollment: enrollment, Keywords: keywords, Operations: operationFacets,
+		PaymentOptions: paymentOptions, Payments: payments,
+	}, nil
 }
 
 func parseFacet[Value ~string](data []byte, name string, allowed []Value) ([]Facet[Value], error) {
@@ -287,7 +294,10 @@ func validatePaymentFilters(values []PaymentFilter) ([]PaymentFilter, error) {
 		if (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) || (value.Authentication != "" && !validAuthentication(value.Authentication, false)) {
 			return nil, errors.New("payments are invalid")
 		}
-		identity := string(value.Name) + "\x00" + string(value.Authentication)
+		if err := validatePaymentOptions(value.Options); err != nil {
+			return nil, err
+		}
+		identity := string(value.Name) + "\x00" + string(value.Authentication) + "\x00" + paymentOptionIdentity(value.Options)
 		if _, exists := seen[identity]; exists {
 			return nil, errors.New("payments are invalid")
 		}
@@ -322,14 +332,66 @@ func parseOperation(data json.RawMessage) (odp.OperationDescriptor, error) {
 
 func parsePayment(data json.RawMessage) (odp.PaymentProtocol, error) {
 	var object map[string]json.RawMessage
-	if json.Unmarshal(data, &object) != nil || len(object) != 2 {
+	if json.Unmarshal(data, &object) != nil || len(object) < 2 || len(object) > 3 {
 		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
 	}
+	if _, exists := object["authentication"]; !exists {
+		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
+	}
+	if _, exists := object["name"]; !exists {
+		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
+	}
+	for name := range object {
+		if name != "authentication" && name != "name" && name != "options" {
+			return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
+		}
+	}
 	var value odp.PaymentProtocol
-	if json.Unmarshal(object["authentication"], &value.Authentication) != nil || json.Unmarshal(object["name"], &value.Name) != nil || !validAuthentication(value.Authentication, false) || (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) {
+	if json.Unmarshal(data, &value) != nil || !validAuthentication(value.Authentication, false) || (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) || validatePaymentOptions(value.Options) != nil {
 		return odp.PaymentProtocol{}, errors.New("payment descriptor is invalid")
 	}
 	return value, nil
+}
+
+func parsePaymentOptionFacet(data json.RawMessage) (PaymentOptionFacetValue, error) {
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil || len(object) != 2 {
+		return PaymentOptionFacetValue{}, errors.New("payment option facet is invalid")
+	}
+	var value PaymentOptionFacetValue
+	if json.Unmarshal(data, &value) != nil || (value.Name != odp.ProtocolMPP && value.Name != odp.ProtocolX402) || !odp.IsPaymentOption(value.Option) {
+		return PaymentOptionFacetValue{}, errors.New("payment option facet is invalid")
+	}
+	return value, nil
+}
+
+func validatePaymentOptions(values []odp.PaymentOption) error {
+	if values == nil {
+		return nil
+	}
+	if len(values) == 0 || len(values) > 16 {
+		return errors.New("payment options are invalid")
+	}
+	seen := make(map[odp.PaymentOption]struct{}, len(values))
+	for _, value := range values {
+		if !odp.IsPaymentOption(value) {
+			return errors.New("payment options are invalid")
+		}
+		if _, exists := seen[value]; exists {
+			return errors.New("payment options must be unique")
+		}
+		seen[value] = struct{}{}
+	}
+	return nil
+}
+
+func paymentOptionIdentity(values []odp.PaymentOption) string {
+	parts := make([]string, len(values))
+	for index, value := range values {
+		parts[index] = string(value)
+	}
+	slices.Sort(parts)
+	return strings.Join(parts, "\x00")
 }
 
 func validAuthentication(value odp.AuthenticationRequirement, optional bool) bool {

@@ -41,6 +41,7 @@ type OperationFilter struct {
 type PaymentFilter struct {
 	Authentication odp.AuthenticationRequirement `json:"authentication,omitempty"`
 	Name           odp.Protocol                  `json:"name"`
+	Options        []odp.PaymentOption           `json:"options,omitempty"`
 }
 
 type SearchRequest struct {
@@ -73,10 +74,16 @@ type Facet[Value any] struct {
 }
 
 type Facets struct {
-	Keywords   []Facet[string]
-	Enrollment []Facet[odp.EnrollmentProtocol]
-	Operations []Facet[odp.OperationDescriptor]
-	Payments   []Facet[odp.PaymentProtocol]
+	Enrollment     []Facet[odp.EnrollmentProtocol]
+	Keywords       []Facet[string]
+	Operations     []Facet[odp.OperationDescriptor]
+	PaymentOptions []Facet[PaymentOptionFacetValue]
+	Payments       []Facet[odp.PaymentProtocol]
+}
+
+type PaymentOptionFacetValue struct {
+	Name   odp.Protocol      `json:"name"`
+	Option odp.PaymentOption `json:"option"`
 }
 
 type SearchPage struct {

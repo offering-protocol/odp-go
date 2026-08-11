@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/payment-option.schema.json",
+  "title": "ODP Payment Option",
+  "type": "string",
+  "enum": [
+    "algorand",
+    "aptos",
+    "arbitrum",
+    "avalanche",
+    "base",
+    "card",
+    "ethereum",
+    "hedera",
+    "inflow",
+    "lightning",
+    "polygon",
+    "solana",
+    "stellar",
+    "stripe",
+    "tempo",
+    "ton"
+  ]
+}
