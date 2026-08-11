@@ -55,6 +55,19 @@ func TestServiceDocumentParsesBrandingAndOpenAPI(t *testing.T) {
 	}
 }
 
+func TestServiceDocumentParsesPaymentOptions(t *testing.T) {
+	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"payments":[{"authentication":"not-required","name":"mpp","options":["card","inflow","solana"]}]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Protocols == nil || len(document.Protocols.Payments) != 1 || len(document.Protocols.Payments[0].Options) != 3 || document.Protocols.Payments[0].Options[1] != odp.PaymentOptionInflow {
+		t.Fatalf("document = %#v", document)
+	}
+	if !odp.IsPaymentOption(odp.PaymentOptionBase) || odp.IsPaymentOption("future-option") {
+		t.Fatal("payment option vocabulary mismatch")
+	}
+}
+
 func TestKnownMemberCannotBeInjectedThroughAdditionalMembers(t *testing.T) {
 	offering := odp.Offering{
 		Additional: odp.AdditionalMembers{

@@ -69,6 +69,11 @@ offeringURL, err := odp.BuildOperationURL(
 Pagination uses Go iterators, carries cancellation through `context.Context`, rejects continuation
 loops, and enforces the protocol's 16-page traversal limit.
 
+Service payment descriptors may advertise payment-option labels such as `PaymentOptionInflow`,
+`PaymentOptionSolana`, or `PaymentOptionBase`. `IsPaymentOption` checks the closed ODP vocabulary.
+These labels summarize compatibility; live MPP and x402 responses provide the authoritative payment
+terms.
+
 ```go
 for offering, err := range odp.IterateItems(ctx, firstPage, loadPage) {
 	if err != nil {
@@ -102,7 +107,10 @@ if err != nil {
 for candidate, err := range directoryClient.SearchServices(ctx, directory.SearchRequest{
 	Filters: &directory.ServiceFilters{
 		Keywords: []string{"gpu"},
-		Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP}},
+		Payments: []directory.PaymentFilter{{
+			Name: odp.ProtocolMPP,
+			Options: []odp.PaymentOption{odp.PaymentOptionInflow, odp.PaymentOptionSolana},
+		}},
 	},
 }, directory.IterationOptions{MaxItems: 20}) {
 	if err != nil {

@@ -20,7 +20,7 @@ const serviceResult = `{
   "localizations": ["en"],
   "keywords": ["gpu"],
   "operations": [{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],
-  "protocols": {"payments": [{"authentication":"not-required","name":"mpp"}]},
+  "protocols": {"payments": [{"authentication":"not-required","name":"mpp","options":["inflow","solana"]}]},
   "indexed_at": "2026-08-02T00:00:00Z"
 }`
 
@@ -68,7 +68,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 			t.Fatal(err)
 		}
 		body = string(contents)
-		return response(http.StatusOK, `{"items":[`+serviceResult+`],"facets":{"enrollment":[{"value":{"name":"aep"},"count":1}],"keywords":[{"value":"gpu","count":1}],"operations":[{"value":{"authentication":"required","name":"get-offering"},"count":1}],"payments":[{"value":{"authentication":"not-required","name":"mpp"},"count":1}]}}`, nil), nil
+		return response(http.StatusOK, `{"items":[`+serviceResult+`],"facets":{"enrollment":[{"value":{"name":"aep"},"count":1}],"keywords":[{"value":"gpu","count":1}],"operations":[{"value":{"authentication":"required","name":"get-offering"},"count":1}],"payment_options":[{"value":{"name":"mpp","option":"inflow"},"count":1},{"value":{"name":"mpp","option":"solana"},"count":1}],"payments":[{"value":{"authentication":"not-required","name":"mpp","options":["inflow","solana"]},"count":1}]}}`, nil), nil
 	})
 
 	pages := client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{
@@ -77,7 +77,9 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 			Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}},
 			Keywords:   []string{"gpu", "accelerator"},
 			Operations: []directory.OperationFilter{{Authentication: odp.AuthenticationRequired, Name: odp.OperationGetOffering}},
-			Payments:   []directory.PaymentFilter{{Name: odp.ProtocolMPP}},
+			Payments: []directory.PaymentFilter{{
+				Name: odp.ProtocolMPP, Options: []odp.PaymentOption{odp.PaymentOptionInflow, odp.PaymentOptionSolana},
+			}},
 		},
 		Limit: 25,
 	}, directory.IterationOptions{})
@@ -91,7 +93,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 	if method != http.MethodPost {
 		t.Fatalf("method = %q", method)
 	}
-	wantBody := `{"filters":{"enrollment":[{"name":"aep"}],"keywords":["gpu","accelerator"],"operations":[{"authentication":"required","name":"get-offering"}],"payments":[{"name":"mpp"}]},"limit":25,"query":"compute"}`
+	wantBody := `{"filters":{"enrollment":[{"name":"aep"}],"keywords":["gpu","accelerator"],"operations":[{"authentication":"required","name":"get-offering"}],"payments":[{"name":"mpp","options":["inflow","solana"]}]},"limit":25,"query":"compute"}`
 	if body != wantBody {
 		t.Fatalf("body = %s, want %s", body, wantBody)
 	}
@@ -101,7 +103,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 	if page.Facets == nil || len(page.Facets.Keywords) != 1 || page.Facets.Keywords[0].Value != "gpu" || page.Facets.Keywords[0].Count != 1 {
 		t.Fatalf("facets = %#v", page.Facets)
 	}
-	if len(page.Facets.Enrollment) != 1 || page.Facets.Enrollment[0].Value.Name != odp.ProtocolAEP || len(page.Facets.Operations) != 1 || page.Facets.Operations[0].Value.Authentication != odp.AuthenticationRequired || len(page.Facets.Payments) != 1 || page.Facets.Payments[0].Value.Name != odp.ProtocolMPP {
+	if len(page.Facets.Enrollment) != 1 || page.Facets.Enrollment[0].Value.Name != odp.ProtocolAEP || len(page.Facets.Operations) != 1 || page.Facets.Operations[0].Value.Authentication != odp.AuthenticationRequired || len(page.Facets.PaymentOptions) != 2 || page.Facets.PaymentOptions[0].Value.Option != odp.PaymentOptionInflow || len(page.Facets.Payments) != 1 || page.Facets.Payments[0].Value.Name != odp.ProtocolMPP || len(page.Facets.Payments[0].Value.Options) != 2 {
 		t.Fatalf("descriptor facets = %#v", page.Facets)
 	}
 }
@@ -274,6 +276,8 @@ func TestSearchValidation(t *testing.T) {
 		{name: "empty keywords", request: directory.SearchRequest{Filters: &directory.ServiceFilters{Keywords: []string{}}}},
 		{name: "empty operations", request: directory.SearchRequest{Filters: &directory.ServiceFilters{Operations: []directory.OperationFilter{}}}},
 		{name: "unsupported payment", request: directory.SearchRequest{Filters: &directory.ServiceFilters{Payments: []directory.PaymentFilter{{Name: "other"}}}}},
+		{name: "unsupported payment option", request: directory.SearchRequest{Filters: &directory.ServiceFilters{Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP, Options: []odp.PaymentOption{"future-option"}}}}}},
+		{name: "duplicate payment option", request: directory.SearchRequest{Filters: &directory.ServiceFilters{Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP, Options: []odp.PaymentOption{odp.PaymentOptionSolana, odp.PaymentOptionSolana}}}}}},
 		{name: "limit", request: directory.SearchRequest{Limit: 101}},
 		{name: "max items", options: directory.IterationOptions{MaxItems: 10_001}},
 		{name: "max pages", options: directory.IterationOptions{MaxPages: 17}},

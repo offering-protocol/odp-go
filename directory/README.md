@@ -23,7 +23,10 @@ request := directory.SearchRequest{
 	Query: "compute",
 	Filters: &directory.ServiceFilters{
 		Keywords: []string{"gpu", "accelerator"},
-		Payments: []directory.PaymentFilter{{Name: odp.ProtocolMPP}},
+		Payments: []directory.PaymentFilter{{
+			Name: odp.ProtocolMPP,
+			Options: []odp.PaymentOption{odp.PaymentOptionInflow, odp.PaymentOptionSolana},
+		}},
 	},
 	Limit: 25,
 }
@@ -35,6 +38,11 @@ for candidate, err := range directoryClient.SearchServices(ctx, request, directo
 	fmt.Printf("%s: %s\n", candidate.Name, candidate.ServiceOrigin)
 }
 ```
+
+Options within one payment filter are alternatives. The example matches Services that accept either
+InFlow or Solana through MPP. A protocol-only `PaymentFilter{Name: odp.ProtocolMPP}` matches any
+Service that advertises MPP. `Facets.Payments` reports protocol counts and `Facets.PaymentOptions`
+reports each protocol-option count independently.
 
 Use `SearchPages` when facet counts or page-level additive members are needed:
 
