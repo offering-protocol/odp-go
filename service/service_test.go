@@ -20,11 +20,15 @@ func newService(t *testing.T, catalog service.Catalog) *service.Service {
 	runtime, err := service.New(service.Options{
 		Catalog: catalog,
 		Document: odp.ServiceDocument{
-			Description:   "Example catalog",
-			HTTP:          odp.HTTPConfiguration{EndpointBase: "/odp"},
-			Language:      "en",
-			Localizations: []string{"en"},
-			Name:          "Example",
+			Description:      "Example catalog",
+			DocumentationURL: "/developers/",
+			HTTP:             odp.HTTPConfiguration{EndpointBase: "/odp"},
+			Language:         "en",
+			Localizations:    []string{"en"},
+			Name:             "Example",
+			StatusURL:        "https://status.example.com/",
+			SupportURL:       "/support/",
+			WebsiteURL:       "/store/",
 		},
 	})
 	if err != nil {
@@ -93,6 +97,10 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 	wellKnown := request(t, runtime, http.MethodGet, "https://service.example/.well-known/odp", nil, nil)
 	if wellKnown.Code != http.StatusOK || wellKnown.Header().Get("Content-Type") != service.MediaType {
 		t.Fatalf("well-known response = %d %q", wellKnown.Code, wellKnown.Header().Get("Content-Type"))
+	}
+	links := decodeObject(t, wellKnown)
+	if links["documentation_url"] != "/developers/" || links["status_url"] != "https://status.example.com/" || links["support_url"] != "/support/" || links["website_url"] != "/store/" {
+		t.Fatalf("Service links = %#v", links)
 	}
 
 	list := request(t, runtime, http.MethodGet, "https://service.example/odp/offerings", nil, nil)

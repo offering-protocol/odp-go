@@ -675,6 +675,36 @@
       }
     },
     {
+      "name": "service-resource-links-are-valid",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        },
+        "documentation_url": "/developers/",
+        "status_url": "https://status.example.com/",
+        "support_url": "/support/",
+        "website_url": "/store/"
+      }
+    },
+    {
       "name": "service-web-url-is-prohibited",
       "valid": false,
       "document": {
@@ -698,7 +728,34 @@
         "http": {
           "endpoint_base": "/odp/"
         },
-        "web_url": "/"
+        "web_url": "/store/"
+      }
+    },
+    {
+      "name": "service-resource-link-is-invalid",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        },
+        "support_url": "//support.example.com/"
       }
     }
   ]

@@ -26,6 +26,9 @@
       "minLength": 1,
       "maxLength": 1024
     },
+    "documentation_url": {
+      "$ref": "resource-reference.schema.json"
+    },
     "language": {
       "type": "string",
       "minLength": 2,
@@ -111,6 +114,15 @@
     },
     "search_capabilities": {
       "$ref": "search-capabilities.schema.json"
+    },
+    "status_url": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "support_url": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "website_url": {
+      "$ref": "resource-reference.schema.json"
     }
   },
   "allOf": [

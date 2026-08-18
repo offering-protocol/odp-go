@@ -56,16 +56,20 @@ type IterationOptions struct {
 }
 
 type Service struct {
-	Additional    odp.AdditionalMembers
-	Description   string
-	IndexedAt     time.Time
-	Keywords      []string
-	Language      string
-	Localizations []string
-	Name          string
-	Operations    []odp.OperationDescriptor
-	Protocols     *odp.ServiceProtocols
-	ServiceOrigin string
+	Additional       odp.AdditionalMembers
+	Description      string
+	DocumentationURL string
+	IndexedAt        time.Time
+	Keywords         []string
+	Language         string
+	Localizations    []string
+	Name             string
+	Operations       []odp.OperationDescriptor
+	Protocols        *odp.ServiceProtocols
+	ServiceOrigin    string
+	StatusURL        string
+	SupportURL       string
+	WebsiteURL       string
 }
 
 type Facet[Value any] struct {
