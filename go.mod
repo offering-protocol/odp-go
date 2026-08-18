@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/dlclark/regexp2 v1.12.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 )
 
 require (
