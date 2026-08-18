@@ -16,12 +16,16 @@ const serviceResult = `{
   "service_origin": "https://compute.example",
   "name": "Compute",
   "description": "GPU compute",
+  "documentation_url": "/developers/",
   "language": "en",
   "localizations": ["en"],
   "keywords": ["gpu"],
   "operations": [{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],
   "protocols": {"payments": [{"authentication":"not-required","name":"mpp","options":["inflow","solana"]}]},
-  "indexed_at": "2026-08-02T00:00:00Z"
+  "indexed_at": "2026-08-02T00:00:00Z",
+  "status_url": "https://status.compute.example/",
+  "support_url": "/support/",
+  "website_url": "/compute/"
 }`
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -99,6 +103,10 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 	}
 	if len(page.Items) != 1 || page.Items[0].ServiceOrigin != "https://compute.example" {
 		t.Fatalf("items = %#v", page.Items)
+	}
+	service := page.Items[0]
+	if service.DocumentationURL != "/developers/" || service.StatusURL != "https://status.compute.example/" || service.SupportURL != "/support/" || service.WebsiteURL != "/compute/" {
+		t.Fatalf("service links = %#v", service)
 	}
 	if page.Facets == nil || len(page.Facets.Keywords) != 1 || page.Facets.Keywords[0].Value != "gpu" || page.Facets.Keywords[0].Count != 1 {
 		t.Fatalf("facets = %#v", page.Facets)

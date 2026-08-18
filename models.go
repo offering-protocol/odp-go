@@ -248,6 +248,7 @@ type ServiceDocument struct {
 	Additional         AdditionalMembers     `json:"-"`
 	Branding           *ServiceBranding      `json:"branding,omitempty"`
 	Description        string                `json:"description"`
+	DocumentationURL   string                `json:"documentation_url,omitempty"`
 	HTTP               HTTPConfiguration     `json:"http"`
 	Keywords           []string              `json:"keywords,omitempty"`
 	Language           string                `json:"language"`
@@ -257,6 +258,9 @@ type ServiceDocument struct {
 	Operations         []OperationDescriptor `json:"operations"`
 	Protocols          *ServiceProtocols     `json:"protocols,omitempty"`
 	SearchCapabilities *SearchCapabilities   `json:"search_capabilities,omitempty"`
+	StatusURL          string                `json:"status_url,omitempty"`
+	SupportURL         string                `json:"support_url,omitempty"`
+	WebsiteURL         string                `json:"website_url,omitempty"`
 }
 
 type Collection struct {

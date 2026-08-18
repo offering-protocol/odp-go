@@ -55,6 +55,16 @@ func TestServiceDocumentParsesBrandingAndOpenAPI(t *testing.T) {
 	}
 }
 
+func TestServiceDocumentParsesResourceLinks(t *testing.T) {
+	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","documentation_url":"/developers/","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"status_url":"https://status.example.com/","support_url":"/support/","website_url":"/store/"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.DocumentationURL != "/developers/" || document.StatusURL != "https://status.example.com/" || document.SupportURL != "/support/" || document.WebsiteURL != "/store/" {
+		t.Fatalf("document = %#v", document)
+	}
+}
+
 func TestServiceDocumentParsesPaymentOptions(t *testing.T) {
 	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"payments":[{"authentication":"not-required","name":"mpp","options":["card","inflow","solana"]}]}}`))
 	if err != nil {

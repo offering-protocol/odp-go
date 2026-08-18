@@ -122,6 +122,11 @@ func parseService(data []byte) (Service, error) {
 	if err := decodeRequired(object, "description", &document.Description); err != nil {
 		return Service{}, err
 	}
+	if raw, ok := object["documentation_url"]; ok {
+		if err := json.Unmarshal(raw, &document.DocumentationURL); err != nil {
+			return Service{}, errors.New("documentation_url is invalid")
+		}
+	}
 	if err := decodeRequired(object, "language", &document.Language); err != nil {
 		return Service{}, err
 	}
@@ -143,6 +148,17 @@ func parseService(data []byte) (Service, error) {
 		}
 		document.Protocols = &protocols
 	}
+	for name, destination := range map[string]*string{
+		"status_url":  &document.StatusURL,
+		"support_url": &document.SupportURL,
+		"website_url": &document.WebsiteURL,
+	} {
+		if raw, ok := object[name]; ok {
+			if err := json.Unmarshal(raw, destination); err != nil {
+				return Service{}, fmt.Errorf("%s is invalid", name)
+			}
+		}
+	}
 	encoded, _ := json.Marshal(document)
 	document, err = odp.ParseServiceDocument(encoded)
 	if err != nil {
@@ -157,10 +173,11 @@ func parseService(data []byte) (Service, error) {
 		return Service{}, errors.New("indexed_at must be a date-time")
 	}
 	return Service{
-		Additional:  cloneAdditional(object, "service_origin", "name", "description", "language", "localizations", "keywords", "operations", "protocols", "indexed_at"),
-		Description: document.Description, IndexedAt: indexedAt, Keywords: document.Keywords,
+		Additional:  cloneAdditional(object, "service_origin", "name", "description", "documentation_url", "language", "localizations", "keywords", "operations", "protocols", "indexed_at", "status_url", "support_url", "website_url"),
+		Description: document.Description, DocumentationURL: document.DocumentationURL, IndexedAt: indexedAt, Keywords: document.Keywords,
 		Language: document.Language, Localizations: document.Localizations, Name: document.Name,
 		Operations: document.Operations, Protocols: document.Protocols, ServiceOrigin: serviceOrigin,
+		StatusURL: document.StatusURL, SupportURL: document.SupportURL, WebsiteURL: document.WebsiteURL,
 	}, nil
 }
 
