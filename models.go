@@ -232,7 +232,7 @@ const (
 
 type ServiceBrandingImage struct {
 	Source string                   `json:"src"`
-	Type   ServiceBrandingImageType `json:"type"`
+	Type   ServiceBrandingImageType `json:"type,omitempty"`
 }
 
 type ServiceBranding struct {
@@ -263,12 +263,31 @@ type ServiceDocument struct {
 	WebsiteURL         string                `json:"website_url,omitempty"`
 }
 
+type ResourceImageType string
+
+const (
+	ResourceImageAVIF ResourceImageType = "image/avif"
+	ResourceImageJPEG ResourceImageType = "image/jpeg"
+	ResourceImagePNG  ResourceImageType = "image/png"
+	ResourceImageSVG  ResourceImageType = "image/svg+xml"
+	ResourceImageWebP ResourceImageType = "image/webp"
+)
+
+type ResourceImage struct {
+	Alt    string            `json:"alt,omitempty"`
+	Height int               `json:"height,omitempty"`
+	Source string            `json:"src"`
+	Type   ResourceImageType `json:"type,omitempty"`
+	Width  int               `json:"width,omitempty"`
+}
+
 type Collection struct {
 	Additional         AdditionalMembers   `json:"-"`
 	AuthExpands        bool                `json:"auth_expands,omitempty"`
 	Description        string              `json:"description,omitempty"`
 	DetailFields       []string            `json:"detail_fields,omitempty"`
 	ID                 string              `json:"id"`
+	Images             []ResourceImage     `json:"images,omitempty"`
 	Language           string              `json:"language,omitempty"`
 	Localizations      []string            `json:"localizations,omitempty"`
 	Name               string              `json:"name"`
@@ -327,6 +346,7 @@ type Offering struct {
 	Description   string                     `json:"description,omitempty"`
 	DetailFields  []string                   `json:"detail_fields,omitempty"`
 	ID            string                     `json:"id"`
+	Images        []ResourceImage            `json:"images,omitempty"`
 	Language      string                     `json:"language,omitempty"`
 	Localizations []string                   `json:"localizations,omitempty"`
 	Name          string                     `json:"name"`

@@ -31,7 +31,7 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
 
-      - run: make spec-sync verify
+      - run: make verify
         env:
           ODP_SPECS_DIR: .conformance/odp-specs
 

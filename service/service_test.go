@@ -48,9 +48,13 @@ func staticService(t *testing.T) *service.Service {
 				CollectionIDs: []string{"compute"},
 				Description:   "Dedicated accelerator",
 				ID:            "gpu-h100",
-				Name:          "H100 GPU",
-				ODPVersion:    odp.Version,
-				Schema:        &odp.SchemaReference{URL: "/schemas/gpu.json"},
+				Images: []odp.ResourceImage{
+					{Source: "/images/gpu-front.webp", Type: odp.ResourceImageWebP},
+					{Source: "/images/gpu-back.webp", Type: odp.ResourceImageWebP},
+				},
+				Name:       "H100 GPU",
+				ODPVersion: odp.Version,
+				Schema:     &odp.SchemaReference{URL: "/schemas/gpu.json"},
 			},
 			{ID: "storage", Name: "Storage", ODPVersion: odp.Version},
 		},
@@ -112,6 +116,9 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 	if _, exists := first["attributes"]; exists {
 		t.Fatal("terse Offering contains attributes")
 	}
+	if images := first["images"].([]any); len(images) != 1 {
+		t.Fatalf("terse Offering images = %d, want 1", len(images))
+	}
 
 	detail := request(t, runtime, http.MethodGet, "https://service.example/odp/offerings/gpu-h100", nil, nil)
 	offering := decodeObject(t, detail)
@@ -120,6 +127,9 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 	}
 	if _, exists := offering["attributes"]; !exists {
 		t.Fatal("full Offering omits attributes")
+	}
+	if images := offering["images"].([]any); len(images) != 2 {
+		t.Fatalf("full Offering images = %d, want 2", len(images))
 	}
 }
 

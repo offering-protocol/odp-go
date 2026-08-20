@@ -5,8 +5,7 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "src",
-    "type"
+    "src"
   ],
   "properties": {
     "src": {

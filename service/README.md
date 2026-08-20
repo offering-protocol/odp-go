@@ -55,8 +55,9 @@ odpService, err := service.New(service.Options{
 Branding is optional. When present, it contains both a square icon and a wide logo as SVG, PNG, or
 WebP resources. Raster icons are square and at least 200 by 200 pixels; raster logos use a 4:1
 aspect ratio and are at least 400 by 100 pixels. SVG resources use the corresponding aspect ratio.
-The optional Service-wide OpenAPI document is inherited by Offering Actions that identify only an
-operation ID.
+Each image's optional `Type` provides a pre-retrieval format hint; set it when the resource URL does
+not have a recognizable filename extension. The optional Service-wide OpenAPI document is inherited
+by Offering Actions that identify only an operation ID.
 
 Mount `odpService` at `/.well-known/odp` and its configured endpoint base. Operations default to
 `not-required`; `OperationAuthentication` advertises different access requirements. Authentication,

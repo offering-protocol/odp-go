@@ -14,8 +14,10 @@ implementing or changing wire behavior.
 
 ## Verification
 
-Run `make verify` before merging. Public APIs are the exported identifiers outside `internal` and
-must be backed by tests and authoritative protocol behavior.
+Check out `odp-specs` beside this repository or set `ODP_SPECS_DIR`, then run `make verify` before
+merging. Use `make spec-update` to update bundled schemas and conformance vectors from that source.
+Public APIs are the exported identifiers outside `internal` and must be backed by tests and
+authoritative protocol behavior.
 
 ## Conventions
 
