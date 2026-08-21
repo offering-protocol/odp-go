@@ -1,4 +1,4 @@
-.PHONY: conformance consumer-smoke format format-check interoperability spec-sync test tidy-check verify
+.PHONY: conformance consumer-smoke format format-check interoperability spec-sync spec-update test tidy-check verify
 
 conformance:
 	./scripts/run-conformance.sh
@@ -21,10 +21,13 @@ test:
 spec-sync:
 	./scripts/verify-spec-sync.sh
 
+spec-update:
+	./scripts/verify-spec-sync.sh --update
+
 tidy-check:
 	go mod tidy
 	git diff --exit-code -- go.mod go.sum
 
-verify: format-check tidy-check
+verify: spec-sync format-check tidy-check
 	go vet ./...
 	go test -race -coverprofile=coverage.out ./...

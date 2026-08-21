@@ -157,14 +157,18 @@ See the [Service package guide](./service/README.md) and
 
 ## Development
 
-Go 1.25 or newer is required. Run the complete merge gate with:
+Go 1.25 or newer and an `odp-specs` checkout are required. Set `ODP_SPECS_DIR` when the
+specifications are not checked out beside this repository. Run the complete merge gate with:
 
 ```sh
-make verify
+ODP_SPECS_DIR=/path/to/odp-specs make verify
 ```
 
-When an `odp-specs` checkout is available, verify the bundled schemas and conformance vectors with
-`ODP_SPECS_DIR=/path/to/odp-specs make spec-sync`. Continuous integration runs both gates.
+Update the bundled schemas and conformance vectors from their authoritative source with:
+
+```sh
+ODP_SPECS_DIR=/path/to/odp-specs make spec-update
+```
 
 Generate Agent and Service conformance reports with:
 

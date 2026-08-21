@@ -192,11 +192,11 @@ func ParseServiceDocument(data []byte) (ServiceDocument, error) {
 }
 
 func ParseCollection(data []byte) (Collection, error) {
-	return parseJSON(data, "collection.schema.json", "Collection", localizedIssues[Collection])
+	return parseJSON(data, "collection.schema.json", "Collection", representationIssues[Collection])
 }
 
 func ParseOffering(data []byte) (Offering, error) {
-	return parseJSON(data, "offering.schema.json", "Offering", localizedIssues[Offering])
+	return parseJSON(data, "offering.schema.json", "Offering", representationIssues[Offering])
 }
 
 func ParseProblemDetails(data []byte) (ProblemDetails, error) {
@@ -335,18 +335,21 @@ func serviceDocumentIssues(value ServiceDocument) []ValidationIssue {
 	return issues
 }
 
-type localizedRepresentation interface {
+type resourceRepresentation interface {
 	Collection | Offering
 }
 
-func localizedIssues[Value localizedRepresentation](value Value) []ValidationIssue {
+func representationIssues[Value resourceRepresentation](value Value) []ValidationIssue {
 	var representationLanguage string
 	var localizations []string
+	var images []ResourceImage
 	switch typed := any(value).(type) {
 	case Collection:
+		images = typed.Images
 		representationLanguage = typed.Language
 		localizations = typed.Localizations
 	case Offering:
+		images = typed.Images
 		representationLanguage = typed.Language
 		localizations = typed.Localizations
 	}
@@ -371,6 +374,14 @@ func localizedIssues[Value localizedRepresentation](value Value) []ValidationIss
 		if _, exists := folded[strings.ToLower(representationLanguage)]; !exists {
 			issues = append(issues, issue("/localizations", "contains-language", "must contain the representation language"))
 		}
+	}
+	imageSources := make(map[string]struct{}, len(images))
+	for _, image := range images {
+		if _, exists := imageSources[image.Source]; exists {
+			issues = append(issues, issue("/images", "unique-image-source", "must contain unique image sources"))
+			break
+		}
+		imageSources[image.Source] = struct{}{}
 	}
 	return issues
 }

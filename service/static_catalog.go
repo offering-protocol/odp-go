@@ -227,6 +227,7 @@ func terseOffering(offering odp.Offering) odp.Offering {
 		CollectionIDs: offering.CollectionIDs,
 		Description:   offering.Description,
 		ID:            offering.ID,
+		Images:        primaryImage(offering.Images),
 		Language:      offering.Language,
 		Localizations: offering.Localizations,
 		Name:          offering.Name,
@@ -240,12 +241,20 @@ func terseCollection(collection odp.Collection) odp.Collection {
 		AuthExpands:   collection.AuthExpands,
 		Description:   collection.Description,
 		ID:            collection.ID,
+		Images:        primaryImage(collection.Images),
 		Language:      collection.Language,
 		Localizations: collection.Localizations,
 		Name:          collection.Name,
 		ParentIDs:     collection.ParentIDs,
 		WebURL:        collection.WebURL,
 	}
+}
+
+func primaryImage(images []odp.ResourceImage) []odp.ResourceImage {
+	if len(images) == 0 {
+		return nil
+	}
+	return images[:1]
 }
 
 func validateRelationships(offerings []odp.Offering, collections []odp.Collection, collectionByID map[string]odp.Collection) error {

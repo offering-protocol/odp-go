@@ -47,8 +47,7 @@
       "document": {
         "branding": {
           "icon": {
-            "src": "/branding/icon.svg",
-            "type": "image/svg+xml"
+            "src": "/branding/icon.svg"
           },
           "logo": {
             "src": "https://cdn.example/logo.webp",

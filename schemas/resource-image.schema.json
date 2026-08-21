@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://offeringprotocol.org/schemas/resource-image.schema.json",
+  "title": "ODP Resource image",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "src"
+  ],
+  "properties": {
+    "alt": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "src": {
+      "$ref": "resource-reference.schema.json"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "image/avif",
+        "image/jpeg",
+        "image/png",
+        "image/svg+xml",
+        "image/webp"
+      ]
+    },
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    }
+  }
+}

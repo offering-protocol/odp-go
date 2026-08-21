@@ -46,11 +46,11 @@ func TestOfferingPreservesAdditiveMembers(t *testing.T) {
 }
 
 func TestServiceDocumentParsesBrandingAndOpenAPI(t *testing.T) {
-	document, err := odp.ParseServiceDocument([]byte(`{"branding":{"icon":{"src":"/branding/icon.svg","type":"image/svg+xml"},"logo":{"src":"/branding/logo.webp","type":"image/webp"}},"description":"Catalog","http":{"endpoint_base":"/odp","openapi":{"url":"/openapi.json"}},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}]}`))
+	document, err := odp.ParseServiceDocument([]byte(`{"branding":{"icon":{"src":"/branding/icon.svg"},"logo":{"src":"/branding/logo.webp","type":"image/webp"}},"description":"Catalog","http":{"endpoint_base":"/odp","openapi":{"url":"/openapi.json"}},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if document.Branding == nil || document.Branding.Icon.Type != "image/svg+xml" || document.HTTP.OpenAPI == nil || document.HTTP.OpenAPI.URL != "/openapi.json" {
+	if document.Branding == nil || document.Branding.Icon.Type != "" || document.HTTP.OpenAPI == nil || document.HTTP.OpenAPI.URL != "/openapi.json" {
 		t.Fatalf("document = %#v", document)
 	}
 }
@@ -163,6 +163,29 @@ func TestLocalizedResourcesRejectInvalidLanguageTags(t *testing.T) {
 				t.Fatal("parser accepted an invalid language tag")
 			}
 		})
+	}
+}
+
+func TestResourceImages(t *testing.T) {
+	for name, value := range map[string]string{
+		"collection": `{"odp_version":"1.0","id":"compute","name":"Compute","images":[{"alt":"GPU hardware","src":"/images/gpu.jpg"}]}`,
+		"offering":   `{"odp_version":"1.0","id":"gpu","name":"GPU","images":[{"height":1200,"src":"/images/gpu.webp","type":"image/webp","width":1200}]}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			var err error
+			if name == "collection" {
+				_, err = odp.ParseCollection([]byte(value))
+			} else {
+				_, err = odp.ParseOffering([]byte(value))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+
+	if _, err := odp.ParseOffering([]byte(`{"odp_version":"1.0","id":"gpu","name":"GPU","images":[{"src":"/images/gpu.webp"},{"src":"/images/gpu.webp"}]}`)); err == nil {
+		t.Fatal("ParseOffering() accepted duplicate image sources")
 	}
 }
 
