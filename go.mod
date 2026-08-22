@@ -10,7 +10,7 @@ require (
 
 require (
 	github.com/pb33f/libopenapi v0.38.7
-	golang.org/x/net v0.57.0
+	golang.org/x/net v0.58.0
 )
 
 require (
