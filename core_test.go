@@ -65,6 +65,16 @@ func TestServiceDocumentParsesResourceLinks(t *testing.T) {
 	}
 }
 
+func TestServiceDocumentParsesMCPEndpoints(t *testing.T) {
+	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"mcp":[{"description":"Browse the public catalog.","name":"Catalog","type":"streamable-http","url":"/mcp"}],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(document.MCP) != 1 || document.MCP[0].Description != "Browse the public catalog." || document.MCP[0].Name != "Catalog" || document.MCP[0].Type != odp.MCPEndpointStreamableHTTP || document.MCP[0].URL != "/mcp" {
+		t.Fatalf("document = %#v", document)
+	}
+}
+
 func TestServiceDocumentParsesPaymentOptions(t *testing.T) {
 	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"payments":[{"authentication":"not-required","name":"mpp","options":["card","inflow","solana"]}]}}`))
 	if err != nil {

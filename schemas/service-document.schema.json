@@ -45,6 +45,13 @@
         "maxLength": 35
       }
     },
+    "mcp": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "mcp-endpoint.schema.json"
+      }
+    },
     "keywords": {
       "type": "array",
       "maxItems": 32,
