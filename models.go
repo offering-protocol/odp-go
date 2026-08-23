@@ -244,6 +244,19 @@ type ServiceOpenAPI struct {
 	URL string `json:"url"`
 }
 
+type MCPEndpointType string
+
+const (
+	MCPEndpointStreamableHTTP MCPEndpointType = "streamable-http"
+)
+
+type MCPEndpoint struct {
+	Description string          `json:"description,omitempty"`
+	Name        string          `json:"name,omitempty"`
+	Type        MCPEndpointType `json:"type"`
+	URL         string          `json:"url"`
+}
+
 type ServiceDocument struct {
 	Additional         AdditionalMembers     `json:"-"`
 	Branding           *ServiceBranding      `json:"branding,omitempty"`
@@ -253,6 +266,7 @@ type ServiceDocument struct {
 	Keywords           []string              `json:"keywords,omitempty"`
 	Language           string                `json:"language"`
 	Localizations      []string              `json:"localizations"`
+	MCP                []MCPEndpoint         `json:"mcp,omitempty"`
 	Name               string                `json:"name"`
 	ODPVersion         string                `json:"odp_version"`
 	Operations         []OperationDescriptor `json:"operations"`

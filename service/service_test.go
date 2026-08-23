@@ -25,6 +25,7 @@ func newService(t *testing.T, catalog service.Catalog) *service.Service {
 			HTTP:             odp.HTTPConfiguration{EndpointBase: "/odp"},
 			Language:         "en",
 			Localizations:    []string{"en"},
+			MCP:              []odp.MCPEndpoint{{Name: "Catalog", Type: odp.MCPEndpointStreamableHTTP, URL: "/mcp"}},
 			Name:             "Example",
 			StatusURL:        "https://status.example.com/",
 			SupportURL:       "/support/",
@@ -103,7 +104,8 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 		t.Fatalf("well-known response = %d %q", wellKnown.Code, wellKnown.Header().Get("Content-Type"))
 	}
 	links := decodeObject(t, wellKnown)
-	if links["documentation_url"] != "/developers/" || links["status_url"] != "https://status.example.com/" || links["support_url"] != "/support/" || links["website_url"] != "/store/" {
+	mcp := links["mcp"].([]any)[0].(map[string]any)
+	if links["documentation_url"] != "/developers/" || mcp["type"] != "streamable-http" || mcp["url"] != "/mcp" || links["status_url"] != "https://status.example.com/" || links["support_url"] != "/support/" || links["website_url"] != "/store/" {
 		t.Fatalf("Service links = %#v", links)
 	}
 

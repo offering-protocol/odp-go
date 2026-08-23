@@ -42,6 +42,134 @@
       }
     },
     {
+      "name": "mcp-endpoints-are-valid",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "mcp": [
+          {
+            "description": "Browse the public catalog.",
+            "name": "Catalog",
+            "type": "streamable-http",
+            "url": "/mcp/catalog"
+          },
+          {
+            "type": "streamable-http",
+            "url": "https://operations.example.com/mcp"
+          }
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "empty-mcp-endpoints-are-invalid",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "mcp": [],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "unknown-mcp-transport-is-invalid",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "mcp": [
+          {
+            "type": "sse",
+            "url": "/mcp"
+          }
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
+      "name": "mcp-endpoint-requires-url",
+      "valid": false,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "mcp": [
+          {
+            "type": "streamable-http"
+          }
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        }
+      }
+    },
+    {
       "name": "branding-and-service-openapi-are-valid",
       "valid": true,
       "document": {
