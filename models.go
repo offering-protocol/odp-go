@@ -270,6 +270,7 @@ type ServiceDocument struct {
 	Name               string                `json:"name"`
 	ODPVersion         string                `json:"odp_version"`
 	Operations         []OperationDescriptor `json:"operations"`
+	PaymentOrigins     []string              `json:"payment_origins,omitempty"`
 	Protocols          *ServiceProtocols     `json:"protocols,omitempty"`
 	SearchCapabilities *SearchCapabilities   `json:"search_capabilities,omitempty"`
 	StatusURL          string                `json:"status_url,omitempty"`
