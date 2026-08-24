@@ -119,6 +119,14 @@
     "protocols": {
       "$ref": "service-protocols.schema.json"
     },
+    "payment_origins": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "service-origin.schema.json"
+      }
+    },
     "search_capabilities": {
       "$ref": "search-capabilities.schema.json"
     },

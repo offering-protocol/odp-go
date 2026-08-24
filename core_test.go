@@ -88,6 +88,16 @@ func TestServiceDocumentParsesPaymentOptions(t *testing.T) {
 	}
 }
 
+func TestServiceDocumentParsesPaymentOrigins(t *testing.T) {
+	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"payment_origins":["https://payments.example.com"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(document.PaymentOrigins) != 1 || document.PaymentOrigins[0] != "https://payments.example.com" {
+		t.Fatalf("document = %#v", document)
+	}
+}
+
 func TestKnownMemberCannotBeInjectedThroughAdditionalMembers(t *testing.T) {
 	offering := odp.Offering{
 		Additional: odp.AdditionalMembers{

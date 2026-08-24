@@ -859,6 +859,65 @@
       }
     },
     {
+      "name": "payment-origins-are-valid",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        },
+        "payment_origins": [
+          "https://payments.example.com"
+        ]
+      }
+    },
+    {
+      "name": "payment-origin-duplicates-are-redundant",
+      "valid": true,
+      "document": {
+        "odp_version": "1.0",
+        "name": "Example",
+        "description": "An example Service.",
+        "language": "en",
+        "localizations": [
+          "en"
+        ],
+        "operations": [
+          {
+            "authentication": "not-required",
+            "name": "list-offerings"
+          },
+          {
+            "authentication": "not-required",
+            "name": "get-offering"
+          }
+        ],
+        "http": {
+          "endpoint_base": "/odp/"
+        },
+        "payment_origins": [
+          "https://payments.example.com",
+          "https://payments.example.com"
+        ]
+      }
+    },
+    {
       "name": "service-resource-link-is-invalid",
       "valid": false,
       "document": {
