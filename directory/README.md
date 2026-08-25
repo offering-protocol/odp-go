@@ -81,3 +81,10 @@ directoryClient, err := directory.New(directory.Options{
 `Options.HTTPClient` permits transport policy and test injection while preserving the selected
 canonical origin. The client accepts up to five same-origin redirects, bounds response bodies, and
 returns non-success responses as `*directory.RequestError` with the status and response headers.
+
+## Related documentation
+
+- [Agent integration](../agent/README.md)
+- [Protocol models and validation](../README.md#protocol-core)
+- [Canonical directory](https://directory.inflowpay.ai/)
+- [Normative specification and schemas](https://www.offeringprotocol.org/)

@@ -13,6 +13,21 @@ ODP separates Service discovery from catalog discovery. An Agent searches the ca
 for candidate Services, inspects each Service's live ODP document, and then navigates or searches
 that Service's Collections and Offerings.
 
+## Start here
+
+| Goal                                                 | Package     | Guide                                            |
+| ---------------------------------------------------- | ----------- | ------------------------------------------------ |
+| Search the directory and navigate Service catalogs   | `agent`     | [Agent integration](./agent/README.md)           |
+| Search only the canonical directory                  | `directory` | [Directory integration](./directory/README.md)   |
+| Publish an ODP Service                               | `service`   | [Service integration](./service/README.md)       |
+| Work directly with protocol models and validation    | `odp`       | [Protocol core](#protocol-core)                  |
+
+## Install
+
+```sh
+go get github.com/offering-protocol/odp-go@latest
+```
+
 ## Module
 
 ```text
@@ -154,6 +169,18 @@ go run ./examples/odp-service-small
 
 See the [Service package guide](./service/README.md) and
 [runnable example](./examples/odp-service-small/README.md).
+
+## Protocol composition
+
+ODP describes what a Service offers and where its catalog operations and Actions live. It can
+advertise that AEP enrollment, MPP payments, or x402 payments are supported, but the live HTTP
+exchange remains authoritative. Agent applications compose the corresponding credential- and
+payment-aware `http.Client` with the ODP Agent package. Service applications compose enrollment,
+payment, authorization, and rate limiting around the ODP handler as ordinary HTTP middleware.
+
+The ODP packages do not create InFlow accounts, issue AEP credentials, approve payments, or invoke
+Offering Actions. Public catalog discovery works without those integrations when the Service
+advertises its ODP operations as not requiring authentication.
 
 ## Development
 
