@@ -74,6 +74,40 @@ this prevents authenticated or payment-dependent representations from sharing a 
 marks rate-limit and server failures as retryable so application transports can compose AEP, MPP,
 and x402 challenges.
 
+### Compose authentication and payment transport
+
+`ServiceClientOptions.HTTPClient` is the boundary for AEP credentials, MPP payments, x402 payments,
+proxies, and application-specific HTTP policy. For example, an application can add an existing
+credential through a standard `http.RoundTripper`:
+
+```go
+type credentialTransport struct {
+	credential string
+	next       http.RoundTripper
+}
+
+func (transport credentialTransport) RoundTrip(request *http.Request) (*http.Response, error) {
+	prepared := request.Clone(request.Context())
+	prepared.Header.Set("Authorization", "Bearer "+transport.credential)
+	return transport.next.RoundTrip(prepared)
+}
+
+httpClient := &http.Client{Transport: credentialTransport{
+	credential: credential,
+	next:       http.DefaultTransport,
+}}
+
+client, err := agent.NewServiceClient(agent.ServiceClientOptions{
+	CachePartition: principalID,
+	HTTPClient:     httpClient,
+	ServiceURL:     "https://compute.example",
+})
+```
+
+A live AEP, MPP, or x402 implementation can perform its challenge flow at the same transport
+boundary. Set `CachePartition` to a stable identifier for the authenticated principal and access
+context. Do not reuse one partition across anonymous users or different credentials.
+
 ## Use search capabilities and Offering details
 
 Capability methods combine Service-wide definitions with the selected Collection and resolve linked
@@ -152,3 +186,10 @@ environment.
 
 See the [runnable Agent example](../examples/odp-agent-discovery/README.md), which clearly labels and
 isolates its mock directory while querying live ODP Services.
+
+## Related documentation
+
+- [Directory integration](../directory/README.md)
+- [Service integration](../service/README.md)
+- [Protocol models and validation](../README.md#protocol-core)
+- [Normative specification and schemas](https://www.offeringprotocol.org/)
