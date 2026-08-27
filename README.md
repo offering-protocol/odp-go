@@ -144,6 +144,9 @@ Package `agent` inspects live Service Documents and provides validated, lazy Col
 navigation. Its federated discovery client searches candidate Services through `directory`, queries
 their catalogs with bounded concurrency, and emits results in directory order.
 
+Service Documents can advertise supported trust protocols. Visa Trusted Agent Protocol support is
+represented by `ServiceProtocols.Trust` containing `TrustProtocol{Name: ProtocolTAP}`.
+
 Run the small Service and Agent examples in separate terminals:
 
 ```sh

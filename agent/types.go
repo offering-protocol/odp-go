@@ -30,6 +30,7 @@ type Capabilities struct {
 	Enrollment []odp.EnrollmentProtocol
 	Operations []odp.OperationDescriptor
 	Payments   []odp.PaymentProtocol
+	Trust      []odp.TrustProtocol
 }
 
 type Inspection struct {
@@ -65,6 +66,7 @@ type Cache interface {
 
 type ServiceClientOptions struct {
 	AcceptLanguage       string
+	AllowLocalNetwork    bool
 	Cache                Cache
 	CacheFallbacks       CacheFallbacks
 	CachePartition       string

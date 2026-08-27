@@ -133,6 +133,19 @@ func TestServiceDocumentAndRepresentationDefaults(t *testing.T) {
 	if images := offering["images"].([]any); len(images) != 2 {
 		t.Fatalf("full Offering images = %d, want 2", len(images))
 	}
+	terseDetail := request(t, runtime, http.MethodGet, "https://service.example/odp/offerings/gpu-h100?representation=terse", nil, nil)
+	terseOffering := decodeObject(t, terseDetail)
+	if terseOffering["odp_version"] != odp.Version {
+		t.Fatalf("terse Offering odp_version = %v", terseOffering["odp_version"])
+	}
+	if _, exists := terseOffering["actions"]; exists {
+		t.Fatal("standalone terse Offering contains actions")
+	}
+	terseCollectionResponse := request(t, runtime, http.MethodGet, "https://service.example/odp/collections/compute?representation=terse", nil, nil)
+	terseCollection := decodeObject(t, terseCollectionResponse)
+	if terseCollection["odp_version"] != odp.Version {
+		t.Fatalf("terse Collection odp_version = %v", terseCollection["odp_version"])
+	}
 }
 
 func TestServiceDocumentAdvertisesConfiguredOperationAuthentication(t *testing.T) {

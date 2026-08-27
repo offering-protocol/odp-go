@@ -71,13 +71,13 @@ func NewServiceClient(options ServiceClientOptions) (*ServiceClient, error) {
 	}
 	base := options.HTTPClient
 	if base == nil {
-		base = http.DefaultClient
+		base = secureHTTPClient(options.AllowLocalNetwork)
 	}
 	client := *base
 	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	supportingBase := options.SupportingHTTPClient
 	if supportingBase == nil {
-		supportingBase = http.DefaultClient
+		supportingBase = secureHTTPClient(options.AllowLocalNetwork)
 	}
 	supportingClient := *supportingBase
 	supportingClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
@@ -123,6 +123,7 @@ func (client *ServiceClient) Inspect(ctx context.Context) (Inspection, error) {
 	if document.Protocols != nil {
 		capabilities.Enrollment = append([]odp.EnrollmentProtocol(nil), document.Protocols.Enrollment...)
 		capabilities.Payments = append([]odp.PaymentProtocol(nil), document.Protocols.Payments...)
+		capabilities.Trust = append([]odp.TrustProtocol(nil), document.Protocols.Trust...)
 	}
 	return Inspection{
 		Capabilities: capabilities, Document: document, FinalURL: result.finalURL,
@@ -171,7 +172,14 @@ func (client *ServiceClient) GetCollection(ctx context.Context, id string, repre
 	if err != nil {
 		return odp.Collection{}, err
 	}
-	return odp.ParseCollection(data)
+	collection, err := odp.ParseCollection(data)
+	if err != nil {
+		return odp.Collection{}, err
+	}
+	if err := requireCollectionRepresentation(collection, defaultRepresentation(representation, odp.RepresentationFull)); err != nil {
+		return odp.Collection{}, err
+	}
+	return collection, nil
 }
 
 func (client *ServiceClient) ListOfferings(ctx context.Context, options ListOptions) iter.Seq2[odp.Offering, error] {
@@ -241,7 +249,13 @@ func (client *ServiceClient) getOffering(ctx context.Context, id string, represe
 		return odp.Offering{}, Inspection{}, err
 	}
 	offering, err := odp.ParseOffering(data)
-	return offering, inspection, err
+	if err != nil {
+		return odp.Offering{}, Inspection{}, err
+	}
+	if err := requireOfferingRepresentation(offering, defaultRepresentation(representation, odp.RepresentationFull)); err != nil {
+		return odp.Offering{}, Inspection{}, err
+	}
+	return offering, inspection, nil
 }
 
 func (client *ServiceClient) get(ctx context.Context, operation odp.Operation, id string, representation odp.Representation, fallback time.Duration) ([]byte, error) {
@@ -269,11 +283,17 @@ func (client *ServiceClient) getWithInspection(ctx context.Context, inspection I
 			return errors.New("ODP response exceeds its nesting-depth limit")
 		}
 		if operation == odp.OperationGetCollection {
-			_, err := odp.ParseCollection(data)
+			collection, err := odp.ParseCollection(data)
+			if err != nil {
+				return err
+			}
+			return requireCollectionRepresentation(collection, defaultRepresentation(representation, odp.RepresentationFull))
+		}
+		offering, err := odp.ParseOffering(data)
+		if err != nil {
 			return err
 		}
-		_, err := odp.ParseOffering(data)
-		return err
+		return requireOfferingRepresentation(offering, defaultRepresentation(representation, odp.RepresentationFull))
 	}
 	result, err := request(ctx, client.client, http.MethodGet, target.String(), nil, client.acceptLanguage, client.maxRedirects, maximumResourceBytes, client.resourceCache, key, fallback, validate)
 	if err != nil {
@@ -331,11 +351,12 @@ func (client *ServiceClient) continueCollectionPages(ctx context.Context, next s
 			yield(odp.Page[odp.Collection]{}, err)
 			return
 		}
+		representation := defaultRepresentation(options.Representation, odp.RepresentationTerse)
 		validate := func(data []byte) error {
 			if jsonvalue.Depth(data) > maximumResourceDepth {
 				return errors.New("ODP response exceeds its nesting-depth limit")
 			}
-			_, err := odp.ParsePage[odp.Collection](data)
+			_, err := parseCollectionPage(data, representation)
 			return err
 		}
 		fallback := client.fallbacks.Collection
@@ -347,12 +368,12 @@ func (client *ServiceClient) continueCollectionPages(ctx context.Context, next s
 			yield(odp.Page[odp.Collection]{}, err)
 			return
 		}
-		page, err := odp.ParsePage[odp.Collection](data)
+		page, err := parseCollectionPage(data, representation)
 		if err != nil {
 			yield(odp.Page[odp.Collection]{}, err)
 			return
 		}
-		client.yieldCollectionPages(ctx, page, options.MaxPages, fallback, next, yield)
+		client.yieldCollectionPages(ctx, page, representation, options.MaxPages, fallback, next, yield)
 	}
 }
 
@@ -367,7 +388,8 @@ func (client *ServiceClient) collectionPages(ctx context.Context, operation odp.
 			yield(odp.Page[odp.Collection]{}, err)
 			return
 		}
-		page, err := odp.ParsePage[odp.Collection](initial)
+		representation := defaultRepresentation(options.Representation, odp.RepresentationTerse)
+		page, err := parseCollectionPage(initial, representation)
 		if err != nil {
 			yield(odp.Page[odp.Collection]{}, err)
 			return
@@ -376,11 +398,11 @@ func (client *ServiceClient) collectionPages(ctx context.Context, operation odp.
 		if operation == odp.OperationSearchCollections {
 			fallback = 0
 		}
-		client.yieldCollectionPages(ctx, page, options.MaxPages, fallback, "", yield)
+		client.yieldCollectionPages(ctx, page, representation, options.MaxPages, fallback, "", yield)
 	}
 }
 
-func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp.Page[odp.Collection], maxPages int, fallback time.Duration, initialReference string, yield func(odp.Page[odp.Collection], error) bool) {
+func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp.Page[odp.Collection], representation odp.Representation, maxPages int, fallback time.Duration, initialReference string, yield func(odp.Page[odp.Collection], error) bool) {
 	pages := maxPages
 	if pages == 0 {
 		pages = odp.MaxTraversalPages
@@ -406,7 +428,7 @@ func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp
 			if jsonvalue.Depth(data) > maximumResourceDepth {
 				return errors.New("ODP response exceeds its nesting-depth limit")
 			}
-			_, err := odp.ParsePage[odp.Collection](data)
+			_, err := parseCollectionPage(data, representation)
 			return err
 		}
 		data, err := client.continueRequest(ctx, page.Next, fallback, validate)
@@ -414,7 +436,7 @@ func (client *ServiceClient) yieldCollectionPages(ctx context.Context, first odp
 			yield(odp.Page[odp.Collection]{}, err)
 			return
 		}
-		page, err = odp.ParsePage[odp.Collection](data)
+		page, err = parseCollectionPage(data, representation)
 		if err != nil {
 			yield(odp.Page[odp.Collection]{}, err)
 			return
@@ -471,11 +493,12 @@ func (client *ServiceClient) continueOfferingPages(ctx context.Context, next str
 			yield(odp.OfferingPage[odp.Offering]{}, err)
 			return
 		}
+		representation := defaultRepresentation(options.Representation, odp.RepresentationTerse)
 		validate := func(data []byte) error {
 			if jsonvalue.Depth(data) > maximumResourceDepth {
 				return errors.New("ODP response exceeds its nesting-depth limit")
 			}
-			_, err := parseOfferingPage(data, search)
+			_, err := parseOfferingPage(data, search, representation)
 			return err
 		}
 		fallback := client.fallbacks.Offering
@@ -487,7 +510,7 @@ func (client *ServiceClient) continueOfferingPages(ctx context.Context, next str
 			yield(odp.OfferingPage[odp.Offering]{}, err)
 			return
 		}
-		page, err := parseOfferingPage(data, search)
+		page, err := parseOfferingPage(data, search, representation)
 		if err != nil {
 			yield(odp.OfferingPage[odp.Offering]{}, err)
 			return
@@ -503,7 +526,7 @@ func (client *ServiceClient) continueOfferingPages(ctx context.Context, next str
 		load := func(ctx context.Context, reference string) ([]byte, error) {
 			return client.continueRequest(ctx, reference, fallback, validate)
 		}
-		for current, err := range iterateOfferingPages(ctx, page, search, pages, next, load) {
+		for current, err := range iterateOfferingPages(ctx, page, search, representation, pages, next, load) {
 			if err != nil {
 				yield(odp.OfferingPage[odp.Offering]{}, err)
 				return
@@ -526,7 +549,8 @@ func (client *ServiceClient) offeringPages(ctx context.Context, operation odp.Op
 			yield(odp.OfferingPage[odp.Offering]{}, err)
 			return
 		}
-		page, err := parseOfferingPage(initial, operation == odp.OperationSearchOfferings)
+		representation := defaultRepresentation(options.Representation, odp.RepresentationTerse)
+		page, err := parseOfferingPage(initial, operation == odp.OperationSearchOfferings, representation)
 		if err != nil {
 			yield(odp.OfferingPage[odp.Offering]{}, err)
 			return
@@ -544,12 +568,12 @@ func (client *ServiceClient) offeringPages(ctx context.Context, operation odp.Op
 				if jsonvalue.Depth(data) > maximumResourceDepth {
 					return errors.New("ODP response exceeds its nesting-depth limit")
 				}
-				_, err := parseOfferingPage(data, operation == odp.OperationSearchOfferings)
+				_, err := parseOfferingPage(data, operation == odp.OperationSearchOfferings, representation)
 				return err
 			}
 			return client.continueRequest(ctx, next, fallback, validate)
 		}
-		for current, err := range iterateOfferingPages(ctx, page, operation == odp.OperationSearchOfferings, pages, "", load) {
+		for current, err := range iterateOfferingPages(ctx, page, operation == odp.OperationSearchOfferings, representation, pages, "", load) {
 			if err != nil {
 				yield(odp.OfferingPage[odp.Offering]{}, err)
 				return
@@ -612,10 +636,10 @@ func (client *ServiceClient) initialRequest(ctx context.Context, operation odp.O
 			return errors.New("ODP response exceeds its nesting-depth limit")
 		}
 		if operation == odp.OperationListCollections || operation == odp.OperationSearchCollections {
-			_, err := odp.ParsePage[odp.Collection](data)
+			_, err := parseCollectionPage(data, defaultRepresentation(options.Representation, odp.RepresentationTerse))
 			return err
 		}
-		_, err := parseOfferingPage(data, operation == odp.OperationSearchOfferings)
+		_, err := parseOfferingPage(data, operation == odp.OperationSearchOfferings, defaultRepresentation(options.Representation, odp.RepresentationTerse))
 		return err
 	}
 	result, err := request(ctx, client.client, method, target.String(), encoded, client.acceptLanguage, client.maxRedirects, maximumResourceBytes, client.resourceCache, key, fallback, validate)
@@ -638,18 +662,91 @@ func (client *ServiceClient) continueRequest(ctx context.Context, reference stri
 	return result.body, nil
 }
 
-func parseOfferingPage(data []byte, search bool) (odp.OfferingPage[odp.Offering], error) {
+func parseCollectionPage(data []byte, representation odp.Representation) (odp.Page[odp.Collection], error) {
+	page, err := odp.ParsePage[odp.Collection](data)
+	if err != nil {
+		return odp.Page[odp.Collection]{}, err
+	}
+	if len(page.Items) > 100 {
+		return odp.Page[odp.Collection]{}, errors.New("ODP page cannot contain more than 100 items")
+	}
+	for _, item := range page.Items {
+		candidate := item
+		if candidate.ODPVersion == "" {
+			candidate.ODPVersion = page.ODPVersion
+		}
+		encoded, err := json.Marshal(candidate)
+		if err != nil {
+			return odp.Page[odp.Collection]{}, err
+		}
+		validated, err := odp.ParseCollection(encoded)
+		if err != nil {
+			return odp.Page[odp.Collection]{}, err
+		}
+		if err := requireCollectionRepresentation(validated, representation); err != nil {
+			return odp.Page[odp.Collection]{}, err
+		}
+	}
+	return page, nil
+}
+
+func parseOfferingPage(data []byte, search bool, representation odp.Representation) (odp.OfferingPage[odp.Offering], error) {
 	if search {
-		return odp.ParseOfferingSearchResponse(data)
+		page, err := odp.ParseOfferingSearchResponse(data)
+		if err != nil {
+			return odp.OfferingPage[odp.Offering]{}, err
+		}
+		return validateOfferingPage(page, representation)
 	}
 	page, err := odp.ParsePage[odp.Offering](data)
 	if err != nil {
 		return odp.OfferingPage[odp.Offering]{}, err
 	}
-	return odp.OfferingPage[odp.Offering]{Additional: page.Additional, AuthExpands: page.AuthExpands, Items: page.Items, Next: page.Next, ODPVersion: page.ODPVersion}, nil
+	return validateOfferingPage(odp.OfferingPage[odp.Offering]{Additional: page.Additional, AuthExpands: page.AuthExpands, Items: page.Items, Next: page.Next, ODPVersion: page.ODPVersion}, representation)
 }
 
-func iterateOfferingPages(ctx context.Context, first odp.OfferingPage[odp.Offering], search bool, maximumPages int, initialReference string, load func(context.Context, string) ([]byte, error)) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
+func validateOfferingPage(page odp.OfferingPage[odp.Offering], representation odp.Representation) (odp.OfferingPage[odp.Offering], error) {
+	if len(page.Items) > 100 {
+		return odp.OfferingPage[odp.Offering]{}, errors.New("ODP page cannot contain more than 100 items")
+	}
+	for _, item := range page.Items {
+		candidate := item
+		if candidate.ODPVersion == "" {
+			candidate.ODPVersion = page.ODPVersion
+		}
+		encoded, err := json.Marshal(candidate)
+		if err != nil {
+			return odp.OfferingPage[odp.Offering]{}, err
+		}
+		validated, err := odp.ParseOffering(encoded)
+		if err != nil {
+			return odp.OfferingPage[odp.Offering]{}, err
+		}
+		if err := requireOfferingRepresentation(validated, representation); err != nil {
+			return odp.OfferingPage[odp.Offering]{}, err
+		}
+	}
+	return page, nil
+}
+
+func requireOfferingRepresentation(offering odp.Offering, representation odp.Representation) error {
+	if representation == odp.RepresentationTerse && len(offering.Actions) != 0 {
+		return errors.New("ODP Terse Offering cannot contain Actions")
+	}
+	if representation == odp.RepresentationFull && len(offering.DetailFields) != 0 {
+		return errors.New("ODP Full Offering cannot contain detail_fields")
+	}
+	return nil
+}
+
+func requireCollectionRepresentation(collection odp.Collection, representation odp.Representation) error {
+	if representation == odp.RepresentationFull && len(collection.DetailFields) != 0 {
+		return errors.New("ODP Full Collection cannot contain detail_fields")
+	}
+	return nil
+}
+
+func iterateOfferingPages(ctx context.Context, first odp.OfferingPage[odp.Offering], search bool, representation odp.Representation, maximumPages int, initialReference string, load func(context.Context, string) ([]byte, error)) iter.Seq2[odp.OfferingPage[odp.Offering], error] {
 	return func(yield func(odp.OfferingPage[odp.Offering], error) bool) {
 		page := first
 		visited := make(map[string]struct{})
@@ -673,7 +770,7 @@ func iterateOfferingPages(ctx context.Context, first odp.OfferingPage[odp.Offeri
 				yield(odp.OfferingPage[odp.Offering]{}, err)
 				return
 			}
-			page, err = parseOfferingPage(data, search)
+			page, err = parseOfferingPage(data, search, representation)
 			if err != nil {
 				yield(odp.OfferingPage[odp.Offering]{}, err)
 				return

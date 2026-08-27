@@ -87,6 +87,7 @@ func NewStaticCatalog(options StaticCatalogOptions) (Catalog, error) {
 			}
 			if request.Representation == odp.RepresentationTerse {
 				value = terseOffering(value)
+				value.ODPVersion = odp.Version
 			}
 			copy, err := clone(value)
 			return &copy, err
@@ -103,6 +104,7 @@ func NewStaticCatalog(options StaticCatalogOptions) (Catalog, error) {
 			}
 			if request.Representation == odp.RepresentationTerse {
 				value = terseCollection(value)
+				value.ODPVersion = odp.Version
 			}
 			copy, err := clone(value)
 			return &copy, err

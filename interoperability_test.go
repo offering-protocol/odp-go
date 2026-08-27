@@ -48,7 +48,7 @@ func TestLocalAgentAndServiceInteroperate(t *testing.T) {
 	server := httptest.NewServer(localService)
 	t.Cleanup(server.Close)
 
-	client, err := agent.NewServiceClient(agent.ServiceClientOptions{ServiceURL: server.URL})
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatalf("create Agent: %v", err)
 	}

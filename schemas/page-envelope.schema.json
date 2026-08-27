@@ -15,7 +15,8 @@
       "const": "1.0"
     },
     "items": {
-      "type": "array"
+      "type": "array",
+      "maxItems": 100
     },
     "next": {
       "$ref": "resource-reference.schema.json"
