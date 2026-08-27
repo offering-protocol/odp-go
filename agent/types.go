@@ -30,6 +30,7 @@ type Capabilities struct {
 	Enrollment []odp.EnrollmentProtocol
 	Operations []odp.OperationDescriptor
 	Payments   []odp.PaymentProtocol
+	Trust      []odp.TrustProtocol
 }
 
 type Inspection struct {

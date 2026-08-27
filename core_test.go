@@ -88,6 +88,16 @@ func TestServiceDocumentParsesPaymentOptions(t *testing.T) {
 	}
 }
 
+func TestServiceDocumentParsesTrustProtocols(t *testing.T) {
+	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"trust":[{"name":"tap"}]}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Protocols == nil || len(document.Protocols.Trust) != 1 || document.Protocols.Trust[0].Name != odp.ProtocolTAP {
+		t.Fatalf("document = %#v", document)
+	}
+}
+
 func TestServiceDocumentParsesPaymentOrigins(t *testing.T) {
 	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"payment_origins":["https://payments.example.com"]}`))
 	if err != nil {

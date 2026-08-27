@@ -32,7 +32,10 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 		Document: odp.ServiceDocument{
 			Description: "Example catalog", HTTP: odp.HTTPConfiguration{EndpointBase: "/odp"},
 			Language: "en", Localizations: []string{"en"}, Name: "Example",
-			Protocols: &odp.ServiceProtocols{Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}}},
+			Protocols: &odp.ServiceProtocols{
+				Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}},
+				Trust:      []odp.TrustProtocol{{Name: odp.ProtocolTAP}},
+			},
 		},
 		OperationAuthentication: map[odp.Operation]odp.AuthenticationRequirement{
 			odp.OperationGetOffering: odp.AuthenticationOptional,
@@ -65,6 +68,9 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 	}
 	if len(inspection.Capabilities.Operations) == 0 || !hasOperationAuthentication(inspection.Capabilities.Operations, odp.OperationGetOffering, odp.AuthenticationOptional) {
 		t.Fatalf("operation capabilities = %#v", inspection.Capabilities.Operations)
+	}
+	if len(inspection.Capabilities.Trust) != 1 || inspection.Capabilities.Trust[0].Name != odp.ProtocolTAP {
+		t.Fatalf("trust capabilities = %#v", inspection.Capabilities.Trust)
 	}
 	cached, err := client.Inspect(t.Context())
 	if err != nil {

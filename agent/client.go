@@ -123,6 +123,7 @@ func (client *ServiceClient) Inspect(ctx context.Context) (Inspection, error) {
 	if document.Protocols != nil {
 		capabilities.Enrollment = append([]odp.EnrollmentProtocol(nil), document.Protocols.Enrollment...)
 		capabilities.Payments = append([]odp.PaymentProtocol(nil), document.Protocols.Payments...)
+		capabilities.Trust = append([]odp.TrustProtocol(nil), document.Protocols.Trust...)
 	}
 	return Inspection{
 		Capabilities: capabilities, Document: document, FinalURL: result.finalURL,

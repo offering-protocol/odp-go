@@ -71,12 +71,14 @@ type Protocol string
 const (
 	ProtocolAEP  Protocol = "aep"
 	ProtocolMPP  Protocol = "mpp"
+	ProtocolTAP  Protocol = "tap"
 	ProtocolX402 Protocol = "x402"
 )
 
 type ServiceProtocols struct {
 	Enrollment []EnrollmentProtocol `json:"enrollment,omitempty"`
 	Payments   []PaymentProtocol    `json:"payments,omitempty"`
+	Trust      []TrustProtocol      `json:"trust,omitempty"`
 }
 
 type EnrollmentProtocol struct {
@@ -120,6 +122,10 @@ type PaymentProtocol struct {
 	Authentication AuthenticationRequirement `json:"authentication"`
 	Name           Protocol                  `json:"name"`
 	Options        []PaymentOption           `json:"options,omitempty"`
+}
+
+type TrustProtocol struct {
+	Name Protocol `json:"name"`
 }
 
 type FilterType string
