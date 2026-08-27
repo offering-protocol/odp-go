@@ -34,7 +34,7 @@ func TestOfferingDetailsBundleSchemaNormalizeActionsAndResolveOpenAPI(t *testing
 			panic("unexpected supporting request: " + request.URL.String())
 		}
 	})}
-	client, err := NewServiceClient(ServiceClientOptions{ServiceURL: server.URL, SupportingHTTPClient: supporting})
+	client, err := NewServiceClient(ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL, SupportingHTTPClient: supporting})
 	if err != nil {
 		t.Fatal(err)
 	}

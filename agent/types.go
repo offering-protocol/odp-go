@@ -65,6 +65,7 @@ type Cache interface {
 
 type ServiceClientOptions struct {
 	AcceptLanguage       string
+	AllowLocalNetwork    bool
 	Cache                Cache
 	CacheFallbacks       CacheFallbacks
 	CachePartition       string

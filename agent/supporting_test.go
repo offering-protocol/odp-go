@@ -36,6 +36,54 @@ func TestResolveSchemaBundlesExternalReferencesAndValidates(t *testing.T) {
 	}
 }
 
+func TestResolveSchemaHonorsNestedResourceIdentifiers(t *testing.T) {
+	documents := map[string]string{
+		"https://schemas.example/catalog.json":               `{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://schemas.example/catalog.json","$defs":{"specification":{"$id":"specifications/","properties":{"memory":{"$ref":"memory.json"}},"required":["memory"],"type":"object"}},"$ref":"#/$defs/specification"}`,
+		"https://schemas.example/specifications/memory.json": `{"$schema":"https://json-schema.org/draft/2020-12/schema","minimum":1,"type":"integer"}`,
+	}
+	client := supportingTestClient(t, documents)
+	_, validator, err := client.resolveSchema(t.Context(), "https://schemas.example/catalog.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validator.Validate(map[string]any{"memory": 80}); err != nil {
+		t.Fatalf("valid attributes: %v", err)
+	}
+	if err := validator.Validate(map[string]any{"memory": 0}); err == nil {
+		t.Fatal("invalid attributes passed validation")
+	}
+}
+
+func TestResolveSchemaComposesExternalResourceWithFragmentDynamicReference(t *testing.T) {
+	documents := map[string]string{
+		"https://schemas.example/offering.json": `{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://schemas.example/offering.json","$ref":"https://schemas.example/common.json"}`,
+		"https://schemas.example/common.json":   `{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://schemas.example/common.json","$dynamicAnchor":"node","type":"object","properties":{"children":{"type":"array","items":{"$dynamicRef":"#node"}},"name":{"type":"string"}},"required":["name"]}`,
+	}
+	client := supportingTestClient(t, documents)
+	_, validator, err := client.resolveSchema(t.Context(), "https://schemas.example/offering.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validator.Validate(map[string]any{"children": []any{map[string]any{"name": "child"}}, "name": "root"}); err != nil {
+		t.Fatalf("valid recursive attributes: %v", err)
+	}
+	if err := validator.Validate(map[string]any{"children": []any{map[string]any{"name": 1}}, "name": "root"}); err == nil {
+		t.Fatal("invalid recursive attributes passed validation")
+	}
+}
+
+func TestResolveSchemaRejectsExternalDynamicReference(t *testing.T) {
+	for _, reference := range []string{`"https://schemas.example/common.json#node"`, `"common.json#node"`, "null"} {
+		client := supportingTestClient(t, map[string]string{
+			"https://schemas.example/root.json": strings.Replace(`{"$schema":"https://json-schema.org/draft/2020-12/schema","$dynamicRef":REFERENCE}`, "REFERENCE", reference, 1),
+		})
+		_, _, err := client.resolveSchema(t.Context(), "https://schemas.example/root.json")
+		if err == nil || err.Error() != "ODP Attribute Schema $dynamicRef must be a fragment-only reference" {
+			t.Fatalf("reference %s: error = %v", reference, err)
+		}
+	}
+}
+
 func TestAttributeSchemaUsesFallbackCache(t *testing.T) {
 	var requests atomic.Int64
 	httpClient := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {

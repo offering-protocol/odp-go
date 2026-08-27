@@ -37,7 +37,7 @@ func createMockDirectory(ctx context.Context, candidates []string) (*mockDirecto
 	services := make([]directory.Service, 0, len(candidates))
 	wireServices := make([]directoryServiceJSON, 0, len(candidates))
 	for _, candidate := range candidates {
-		client, err := agent.NewServiceClient(agent.ServiceClientOptions{ServiceURL: candidate})
+		client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: candidate})
 		if err != nil {
 			continue
 		}

@@ -15,7 +15,7 @@ func TestOfferingSearchCapabilitiesComposeServiceAndCollectionScopes(t *testing.
 		_, _ = writer.Write([]byte(document))
 	}))
 	defer server.Close()
-	client, err := NewServiceClient(ServiceClientOptions{ServiceURL: server.URL})
+	client, err := NewServiceClient(ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func TestOfferingSearchCapabilitiesOmitDuplicateDefinitions(t *testing.T) {
 		_, _ = writer.Write([]byte(document))
 	}))
 	defer server.Close()
-	client, err := NewServiceClient(ServiceClientOptions{ServiceURL: server.URL})
+	client, err := NewServiceClient(ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatal(err)
 	}

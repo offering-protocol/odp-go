@@ -50,6 +50,9 @@ func (client *ServiceClient) resolveSchema(ctx context.Context, reference string
 		if document["$schema"] != attributeSchemaDialect {
 			return errors.New("ODP Attribute Schema must declare JSON Schema Draft 2020-12")
 		}
+		if err := requireFragmentDynamicReferences(document); err != nil {
+			return err
+		}
 		encoded, err := json.Marshal(document)
 		if err != nil {
 			return err
@@ -63,16 +66,13 @@ func (client *ServiceClient) resolveSchema(ctx context.Context, reference string
 		}
 		documents[documentURL] = document
 		depths[documentURL] = depth
-		for _, candidate := range schemaReferences(document) {
-			resolved, err := resolveSchemaReference(candidate, documentURL)
-			if err != nil {
+		references, err := schemaReferences(document, documentURL)
+		if err != nil {
+			return err
+		}
+		for _, reference := range references {
+			if err := load(reference, depth+1); err != nil {
 				return err
-			}
-			resolved.Fragment = ""
-			if resolved.String() != documentURL {
-				if err := load(resolved.String(), depth+1); err != nil {
-					return err
-				}
 			}
 		}
 		return nil
@@ -80,7 +80,6 @@ func (client *ServiceClient) resolveSchema(ctx context.Context, reference string
 	if err := load(rootURL.String(), 0); err != nil {
 		return nil, nil, err
 	}
-	keys := map[string]string{}
 	externalURLs := make([]string, 0, len(documents)-1)
 	for documentURL := range documents {
 		if documentURL != rootURL.String() {
@@ -88,20 +87,27 @@ func (client *ServiceClient) resolveSchema(ctx context.Context, reference string
 		}
 	}
 	slices.Sort(externalURLs)
-	for index, documentURL := range externalURLs {
-		keys[documentURL] = fmt.Sprintf("odp_external_%d", index)
-	}
 	root := cloneMap(documents[rootURL.String()])
-	rewriteSchemaReferences(root, rootURL.String(), rootURL.String(), keys)
-	if len(keys) != 0 {
+	if _, found := root["$id"]; !found {
+		root["$id"] = rootURL.String()
+	}
+	if len(externalURLs) != 0 {
 		definitions, _ := root["$defs"].(map[string]any)
 		if definitions == nil {
 			definitions = map[string]any{}
 		}
-		for documentURL, key := range keys {
+		for index, documentURL := range externalURLs {
+			key := fmt.Sprintf("odp_external_%d", index)
+			for {
+				if _, exists := definitions[key]; !exists {
+					break
+				}
+				key += "_"
+			}
 			external := cloneMap(documents[documentURL])
-			rewriteSchemaReferences(external, documentURL, rootURL.String(), keys)
-			delete(external, "$id")
+			if _, found := external["$id"]; !found {
+				external["$id"] = documentURL
+			}
 			definitions[key] = external
 		}
 		root["$defs"] = definitions
@@ -151,24 +157,116 @@ func requireSupportedVocabularies(value any) error {
 	return nil
 }
 
-func schemaReferences(value any) []string {
-	result := []string{}
+func requireFragmentDynamicReferences(value any) error {
 	switch typed := value.(type) {
 	case []any:
 		for _, child := range typed {
-			result = append(result, schemaReferences(child)...)
+			if err := requireFragmentDynamicReferences(child); err != nil {
+				return err
+			}
 		}
 	case map[string]any:
-		if reference, ok := typed["$ref"].(string); ok {
-			result = append(result, reference)
+		if reference, found := typed["$dynamicRef"]; found {
+			text, valid := reference.(string)
+			if !valid || !strings.HasPrefix(text, "#") {
+				return errors.New("ODP Attribute Schema $dynamicRef must be a fragment-only reference")
+			}
 		}
-		for key, child := range typed {
-			if key != "$ref" {
-				result = append(result, schemaReferences(child)...)
+		for _, child := range typed {
+			if err := requireFragmentDynamicReferences(child); err != nil {
+				return err
 			}
 		}
 	}
-	return result
+	return nil
+}
+
+func schemaReferences(value any, retrievalURL string) ([]string, error) {
+	local := make(map[string]struct{})
+	if err := schemaResourceURLs(value, retrievalURL, local); err != nil {
+		return nil, err
+	}
+	references := make(map[string]struct{})
+	if err := collectSchemaReferences(value, retrievalURL, references); err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(references))
+	for reference := range references {
+		if _, found := local[reference]; !found {
+			result = append(result, reference)
+		}
+	}
+	slices.Sort(result)
+	return result, nil
+}
+
+func schemaResourceURLs(value any, base string, result map[string]struct{}) error {
+	resolvedBase, err := resolveSchemaReference("", base)
+	if err != nil {
+		return err
+	}
+	resolvedBase.Fragment = ""
+	result[resolvedBase.String()] = struct{}{}
+	switch typed := value.(type) {
+	case []any:
+		for _, child := range typed {
+			if err := schemaResourceURLs(child, base, result); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		if identifier, ok := typed["$id"].(string); ok {
+			resolved, err := resolveSchemaReference(identifier, base)
+			if err != nil {
+				return err
+			}
+			resolved.Fragment = ""
+			base = resolved.String()
+			result[base] = struct{}{}
+		}
+		for _, child := range typed {
+			if err := schemaResourceURLs(child, base, result); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func collectSchemaReferences(value any, base string, result map[string]struct{}) error {
+	switch typed := value.(type) {
+	case []any:
+		for _, child := range typed {
+			if err := collectSchemaReferences(child, base, result); err != nil {
+				return err
+			}
+		}
+	case map[string]any:
+		if identifier, ok := typed["$id"].(string); ok {
+			resolved, err := resolveSchemaReference(identifier, base)
+			if err != nil {
+				return err
+			}
+			resolved.Fragment = ""
+			base = resolved.String()
+		}
+		if reference, ok := typed["$ref"].(string); ok {
+			resolved, err := resolveSchemaReference(reference, base)
+			if err != nil {
+				return err
+			}
+			resolved.Fragment = ""
+			result[resolved.String()] = struct{}{}
+		}
+		for key, child := range typed {
+			if key != "$ref" {
+				if err := collectSchemaReferences(child, base, result); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func resolveSchemaReference(reference, base string) (*url.URL, error) {
@@ -181,36 +279,6 @@ func resolveSchemaReference(reference, base string) (*url.URL, error) {
 		return nil, errors.New("ODP Attribute Schema references must use HTTPS")
 	}
 	return resolved, nil
-}
-
-func rewriteSchemaReferences(value any, documentURL, rootURL string, keys map[string]string) {
-	switch typed := value.(type) {
-	case []any:
-		for _, child := range typed {
-			rewriteSchemaReferences(child, documentURL, rootURL, keys)
-		}
-	case map[string]any:
-		if reference, ok := typed["$ref"].(string); ok {
-			resolved, err := resolveSchemaReference(reference, documentURL)
-			if err == nil {
-				fragment := resolved.Fragment
-				resolved.Fragment = ""
-				prefix := ""
-				if resolved.String() != rootURL {
-					prefix = "/$defs/" + keys[resolved.String()]
-				}
-				if fragment != "" {
-					prefix += "/" + strings.TrimPrefix(fragment, "/")
-				}
-				typed["$ref"] = "#" + prefix
-			}
-		}
-		for key, child := range typed {
-			if key != "$ref" {
-				rewriteSchemaReferences(child, documentURL, rootURL, keys)
-			}
-		}
-	}
 }
 
 func cloneMap(value map[string]any) map[string]any {

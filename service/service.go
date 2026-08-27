@@ -246,6 +246,7 @@ func (service *Service) getOffering(writer http.ResponseWriter, request *http.Re
 	if validated.ID != id {
 		return errors.New("Offering identifier does not match its request path")
 	}
+	validated.ODPVersion = odp.Version
 	return writeJSON(writer, validated, representationLanguage(validated.Language, service.document.Language), MaximumResourceBytes, maximumResourceDepth)
 }
 
@@ -274,6 +275,7 @@ func (service *Service) getCollection(writer http.ResponseWriter, request *http.
 	if validated.ID != id {
 		return errors.New("Collection identifier does not match its request path")
 	}
+	validated.ODPVersion = odp.Version
 	return writeJSON(writer, validated, representationLanguage(validated.Language, service.document.Language), MaximumResourceBytes, maximumResourceDepth)
 }
 

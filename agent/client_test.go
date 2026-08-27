@@ -52,7 +52,7 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client, err := agent.NewServiceClient(agent.ServiceClientOptions{InitialPageSize: 1, ServiceURL: server.URL})
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, InitialPageSize: 1, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +146,7 @@ func TestServiceClientSearchesValidatedRequest(t *testing.T) {
 	})
 	server := httptest.NewServer(runtime)
 	defer server.Close()
-	client, err := agent.NewServiceClient(agent.ServiceClientOptions{ServiceURL: server.URL})
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestServiceClientReturnsProblemDetails(t *testing.T) {
 	}
 	server := httptest.NewServer(runtime)
 	defer server.Close()
-	client, err := agent.NewServiceClient(agent.ServiceClientOptions{ServiceURL: server.URL})
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
 	if err != nil {
 		t.Fatal(err)
 	}

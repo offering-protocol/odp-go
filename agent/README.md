@@ -28,6 +28,11 @@ The client validates `/.well-known/odp`, accepts at most five same-origin redire
 four-hour fallback freshness when the Service does not publish HTTP cache metadata. Supply a
 `Cache` for persistent storage; otherwise each client owns an in-memory cache.
 
+The default HTTP clients resolve every destination, reject non-public addresses, pin connections to
+the validated address, and ignore environment proxy settings. Local HTTP development is disabled
+by default. Set `AllowLocalNetwork: true` only for an explicit `localhost`, `127.0.0.1`, or `::1`
+Service. A caller-supplied `HTTPClient` or `SupportingHTTPClient` owns equivalent network policy.
+
 ## Navigate a catalog
 
 List and search methods return lazy Go iterators. Iteration stops network activity when the caller
@@ -77,7 +82,7 @@ and x402 challenges.
 ### Compose authentication and payment transport
 
 `ServiceClientOptions.HTTPClient` is the boundary for AEP credentials, MPP payments, x402 payments,
-proxies, and application-specific HTTP policy. For example, an application can add an existing
+and application-specific HTTP policy. For example, an application can add an existing
 credential through a standard `http.RoundTripper`:
 
 ```go
@@ -146,7 +151,8 @@ Service Document declares `http.openapi.url`; an Action URL overrides that Servi
 Supporting schemas and OpenAPI documents use a separate anonymous HTTP client and must use HTTPS.
 Supply `SupportingHTTPClient` only when those requests need custom network transport; keep it free
 of Service credentials. Attribute Schemas use a 24-hour fallback freshness, while OpenAPI documents
-require explicit HTTP freshness metadata.
+require explicit HTTP freshness metadata. Cross-document schema composition uses `$ref`;
+`$dynamicRef` accepts only a fragment reference such as `#node`.
 
 ## Discover Offerings across Services
 
