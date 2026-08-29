@@ -134,6 +134,32 @@ func TestSearchPagesUsesSandboxOnlyWhenSelected(t *testing.T) {
 	}
 }
 
+func TestSearchPagesFiltersUnknownProtocols(t *testing.T) {
+	result := strings.Replace(serviceResult, `"protocols": {"payments": [{"authentication":"not-required","name":"mpp","options":["inflow","solana"]}]}`, `"protocols":{"enrollment":[{"name":"future-enrollment"}],"payments":[{"authentication":"not-required","name":"future-payment"},{"authentication":"not-required","name":"mpp"}],"trust":[{"name":"future-trust"},{"name":"tap"}]}`, 1)
+	transport := roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+		return response(http.StatusOK, `{"items":[`+result+`]}`, nil), nil
+	})
+	page, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	protocols := page.Items[0].Protocols
+	if protocols == nil || len(protocols.Enrollment) != 0 || len(protocols.Payments) != 1 || protocols.Payments[0].Name != odp.ProtocolMPP || len(protocols.Trust) != 1 || protocols.Trust[0].Name != odp.ProtocolTAP {
+		t.Fatalf("protocols = %#v", protocols)
+	}
+}
+
+func TestSearchPagesRejectsMalformedKnownProtocol(t *testing.T) {
+	result := strings.Replace(serviceResult, `"name":"mpp","options"`, `"name":"mpp","unexpected":true,"options"`, 1)
+	transport := roundTripFunc(func(_ *http.Request) (*http.Response, error) {
+		return response(http.StatusOK, `{"items":[`+result+`]}`, nil), nil
+	})
+	_, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	if err == nil {
+		t.Fatal("Directory accepted a malformed recognized protocol descriptor")
+	}
+}
+
 func TestSearchServicesFollowsOpaqueContinuationWithGet(t *testing.T) {
 	var methods []string
 	transport := roundTripFunc(func(request *http.Request) (*http.Response, error) {

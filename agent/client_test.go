@@ -132,6 +132,26 @@ func TestServiceClientInspectsAndNavigatesRealService(t *testing.T) {
 	}
 }
 
+func TestServiceClientInspectionFiltersUnknownProtocols(t *testing.T) {
+	document := `{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"payments":[{"authentication":"not-required","name":"future-payment"},{"authentication":"not-required","name":"mpp"}],"trust":[{"name":"future-trust"},{"name":"tap"}]}}`
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/odp+json")
+		_, _ = writer.Write([]byte(document))
+	}))
+	defer server.Close()
+	client, err := agent.NewServiceClient(agent.ServiceClientOptions{AllowLocalNetwork: true, ServiceURL: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	inspection, err := client.Inspect(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inspection.Capabilities.Payments) != 1 || inspection.Capabilities.Payments[0].Name != odp.ProtocolMPP || len(inspection.Capabilities.Trust) != 1 || inspection.Capabilities.Trust[0].Name != odp.ProtocolTAP {
+		t.Fatalf("capabilities = %#v", inspection.Capabilities)
+	}
+}
+
 func hasOperationAuthentication(operations []odp.OperationDescriptor, name odp.Operation, authentication odp.AuthenticationRequirement) bool {
 	for _, operation := range operations {
 		if operation.Name == name && operation.Authentication == authentication {

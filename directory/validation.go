@@ -141,13 +141,6 @@ func parseService(data []byte) (Service, error) {
 			return Service{}, errors.New("keywords are invalid")
 		}
 	}
-	if raw, ok := object["protocols"]; ok {
-		var protocols odp.ServiceProtocols
-		if err := json.Unmarshal(raw, &protocols); err != nil {
-			return Service{}, errors.New("protocols are invalid")
-		}
-		document.Protocols = &protocols
-	}
 	for name, destination := range map[string]*string{
 		"status_url":  &document.StatusURL,
 		"support_url": &document.SupportURL,
@@ -160,7 +153,15 @@ func parseService(data []byte) (Service, error) {
 		}
 	}
 	encoded, _ := json.Marshal(document)
-	document, err = odp.ParseServiceDocument(encoded)
+	if protocols, ok := object["protocols"]; ok {
+		var encodedDocument map[string]json.RawMessage
+		if err := json.Unmarshal(encoded, &encodedDocument); err != nil {
+			return Service{}, errors.New("protocols are invalid")
+		}
+		encodedDocument["protocols"] = protocols
+		encoded, _ = json.Marshal(encodedDocument)
+	}
+	document, err = odp.ParseAgentServiceDocument(encoded)
 	if err != nil {
 		return Service{}, err
 	}

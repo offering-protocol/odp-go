@@ -190,6 +190,9 @@ The defaults search at most 10 Services, retain at most 10 terse Offerings from 
 Service requests concurrently. The directory origin is fixed by the selected production or sandbox
 environment.
 
+Inspection filters unrecognized enrollment, payment, and trust protocol descriptors for compatible
+Agent processing. Recognized descriptors remain subject to current-version validation.
+
 See the [runnable Agent example](../examples/odp-agent-discovery/README.md), which clearly labels and
 isolates its mock directory while querying live ODP Services.
 

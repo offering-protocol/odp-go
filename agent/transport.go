@@ -234,7 +234,11 @@ func consumeResponse(response *http.Response, limit int64) (responseData, error)
 func responseError(response responseData) error {
 	var problem *odp.ProblemDetails
 	if mediaType, _, _ := mime.ParseMediaType(response.header.Get("Content-Type")); mediaType == mediaTypeProblem && jsonvalue.Depth(response.body) <= maximumResourceDepth {
-		parsed, err := odp.ParseProblemResponse(response.body, response.status)
+		filtered, err := odp.NormalizeAgentResponse(response.body, "problem")
+		if err != nil {
+			filtered = response.body
+		}
+		parsed, err := odp.ParseProblemResponse(filtered, response.status)
 		if err == nil {
 			problem = &parsed
 		}

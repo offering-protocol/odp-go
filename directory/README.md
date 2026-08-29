@@ -82,6 +82,9 @@ directoryClient, err := directory.New(directory.Options{
 canonical origin. The client accepts up to five same-origin redirects, bounds response bodies, and
 returns non-success responses as `*directory.RequestError` with the status and response headers.
 
+Directory results filter unrecognized enrollment, payment, and trust descriptors while preserving
+recognized, validated protocol capabilities.
+
 ## Related documentation
 
 - [Agent integration](../agent/README.md)

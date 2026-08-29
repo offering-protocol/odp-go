@@ -191,6 +191,439 @@ func ParseServiceDocument(data []byte) (ServiceDocument, error) {
 	return parseJSON(data, "service-document.schema.json", "Service Document", serviceDocumentIssues)
 }
 
+func ParseAgentServiceDocument(data []byte) (ServiceDocument, error) {
+	filtered, err := NormalizeAgentResponse(data, "service-document")
+	if err != nil {
+		return ParseServiceDocument(data)
+	}
+	return ParseServiceDocument(filtered)
+}
+
+func NormalizeAgentResponse(data []byte, kind string) ([]byte, error) {
+	var document map[string]any
+	if err := json.Unmarshal(data, &document); err != nil {
+		return nil, err
+	}
+	normalizeAgentDocument(document, kind)
+	filtered, err := json.Marshal(document)
+	if err != nil {
+		return nil, fmt.Errorf("encode Agent response: %w", err)
+	}
+	return filtered, nil
+}
+
+func normalizeAgentDocument(document map[string]any, kind string) {
+	switch kind {
+	case "service-document":
+		filterAgentProtocols(document)
+		if protocols, ok := document["protocols"].(map[string]any); ok {
+			filterUnknownAuthentication(protocols, "payments")
+		}
+		filterNamedList(document, "operations", map[string]bool{
+			"get-collection": true, "get-offering": true, "list-collection-offerings": true,
+			"list-collections": true, "list-offerings": true, "search-collections": true,
+			"search-offerings": true,
+		})
+		filterUnknownAuthentication(document, "operations")
+		filterTypedList(document, "mcp", map[string]bool{"streamable-http": true})
+		filterClosedObjectList(document, "operations", map[string]bool{"authentication": true, "name": true})
+		filterClosedObjectList(document, "mcp", map[string]bool{"description": true, "name": true, "type": true, "url": true})
+		filterPaymentOptions(document)
+		normalizeBranding(document)
+		normalizeSearchCapabilities(document)
+	case "collection", "offering":
+		filterTypedList(document, "images", map[string]bool{
+			"image/avif": true, "image/jpeg": true, "image/png": true,
+			"image/svg+xml": true, "image/webp": true,
+		})
+		stripObjectList(document, "images", map[string]bool{"alt": true, "height": true, "src": true, "type": true, "width": true})
+		normalizeSearchCapabilities(document)
+		if kind == "offering" {
+			normalizeOffering(document)
+		}
+	case "collection-page", "offering-page":
+		items, ok := document["items"].([]any)
+		if !ok {
+			return
+		}
+		itemKind := "collection"
+		if kind == "offering-page" {
+			itemKind = "offering"
+		}
+		for _, item := range items {
+			if object, itemOK := item.(map[string]any); itemOK {
+				normalizeAgentDocument(object, itemKind)
+			}
+		}
+	case "filter-page":
+		filterDefinitions(document, knownFilter)
+	case "sort-page":
+		filterDefinitions(document, knownSort)
+	case "problem":
+		filterProblemParameters(document)
+	}
+}
+
+func normalizeBranding(document map[string]any) {
+	branding, ok := document["branding"].(map[string]any)
+	if !ok {
+		return
+	}
+	for key := range branding {
+		if key != "icon" && key != "logo" {
+			delete(branding, key)
+		}
+	}
+	for _, member := range []string{"icon", "logo"} {
+		image, imageOK := branding[member].(map[string]any)
+		imageType, typeOK := image["type"].(string)
+		if imageOK && typeOK && imageType != "image/png" && imageType != "image/svg+xml" && imageType != "image/webp" {
+			delete(branding, member)
+		} else if imageOK {
+			for key := range image {
+				if key != "src" && key != "type" {
+					delete(image, key)
+				}
+			}
+		}
+	}
+	if len(branding) == 0 {
+		delete(document, "branding")
+	}
+}
+
+func filterClosedObjectList(document map[string]any, member string, allowed map[string]bool) {
+	items, ok := document[member].([]any)
+	if !ok {
+		return
+	}
+	filtered := items[:0]
+	for _, item := range items {
+		object, objectOK := item.(map[string]any)
+		valid := true
+		if objectOK {
+			for key := range object {
+				if !allowed[key] {
+					valid = false
+				}
+			}
+		}
+		if valid {
+			filtered = append(filtered, item)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(document, member)
+	} else {
+		document[member] = filtered
+	}
+}
+
+func filterUnknownAuthentication(document map[string]any, member string) {
+	items, ok := document[member].([]any)
+	if !ok {
+		return
+	}
+	filtered := items[:0]
+	for _, item := range items {
+		object, objectOK := item.(map[string]any)
+		if !objectOK || !hasUnknownAuthentication(object) {
+			filtered = append(filtered, item)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(document, member)
+	} else {
+		document[member] = filtered
+	}
+}
+
+func hasUnknownAuthentication(value map[string]any) bool {
+	authentication, ok := value["authentication"].(string)
+	return ok && authentication != "not-required" && authentication != "optional" && authentication != "required"
+}
+
+func stripObjectList(document map[string]any, member string, allowed map[string]bool) {
+	items, ok := document[member].([]any)
+	if !ok {
+		return
+	}
+	for _, item := range items {
+		if object, objectOK := item.(map[string]any); objectOK {
+			for key := range object {
+				if !allowed[key] {
+					delete(object, key)
+				}
+			}
+		}
+	}
+}
+
+func normalizeSearchCapabilities(document map[string]any) {
+	capabilities, ok := document["search_capabilities"].(map[string]any)
+	if !ok {
+		return
+	}
+	for member, recognized := range map[string]func(map[string]any) bool{
+		"filters": knownFilter,
+		"sorts":   knownSort,
+	} {
+		source, sourceOK := capabilities[member].(map[string]any)
+		items, itemsOK := source["inline"].([]any)
+		if !sourceOK || !itemsOK {
+			continue
+		}
+		filtered := items[:0]
+		for _, item := range items {
+			definition, definitionOK := item.(map[string]any)
+			if !definitionOK || recognized(definition) {
+				filtered = append(filtered, item)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(capabilities, member)
+		} else {
+			source["inline"] = filtered
+		}
+	}
+	if len(capabilities) == 0 {
+		delete(document, "search_capabilities")
+	}
+}
+
+func filterNamedList(document map[string]any, member string, recognized map[string]bool) {
+	filterAgentList(document, member, "name", recognized)
+}
+
+func filterTypedList(document map[string]any, member string, recognized map[string]bool) {
+	filterAgentList(document, member, "type", recognized)
+}
+
+func filterAgentList(document map[string]any, member, discriminator string, recognized map[string]bool) {
+	items, ok := document[member].([]any)
+	if !ok {
+		return
+	}
+	filtered := items[:0]
+	for _, item := range items {
+		object, objectOK := item.(map[string]any)
+		value, valueOK := object[discriminator].(string)
+		if !objectOK || !valueOK || recognized[value] {
+			filtered = append(filtered, item)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(document, member)
+	} else {
+		document[member] = filtered
+	}
+}
+
+func filterPaymentOptions(document map[string]any) {
+	protocols, ok := document["protocols"].(map[string]any)
+	if !ok {
+		return
+	}
+	payments, ok := protocols["payments"].([]any)
+	if !ok {
+		return
+	}
+	recognized := map[string]bool{
+		"algorand": true, "aptos": true, "arbitrum": true, "avalanche": true,
+		"base": true, "card": true, "ethereum": true, "hedera": true, "inflow": true,
+		"lightning": true, "polygon": true, "solana": true, "stellar": true,
+		"stripe": true, "tempo": true, "ton": true,
+	}
+	for _, payment := range payments {
+		object, objectOK := payment.(map[string]any)
+		options, optionsOK := object["options"].([]any)
+		if !objectOK || !optionsOK {
+			continue
+		}
+		filtered := options[:0]
+		for _, option := range options {
+			name, nameOK := option.(string)
+			if !nameOK || recognized[name] {
+				filtered = append(filtered, option)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(object, "options")
+		} else {
+			object["options"] = filtered
+		}
+	}
+}
+
+func normalizeOffering(document map[string]any) {
+	if schema, ok := document["schema"].(map[string]any); ok && hasUnknownKeys(schema, map[string]bool{"url": true}) {
+		delete(document, "schema")
+	}
+	knownPrices := map[string]bool{
+		"fixed": true, "free": true, "metered": true, "quote": true,
+		"range": true, "starting_at": true,
+	}
+	if price, ok := document["price"].(map[string]any); ok {
+		if priceType, typeOK := price["type"].(string); typeOK && !knownPrices[priceType] {
+			delete(document, "price")
+		}
+	}
+	actions, ok := document["actions"].([]any)
+	if !ok {
+		return
+	}
+	filtered := actions[:0]
+	for _, action := range actions {
+		object, objectOK := action.(map[string]any)
+		if objectOK && hasUnknownAuthentication(object) {
+			continue
+		}
+		if objectOK && hasUnknownKeys(object, map[string]bool{"authentication": true, "description": true, "http": true, "id": true, "openapi": true, "rel": true}) {
+			continue
+		}
+		http, httpOK := object["http"].(map[string]any)
+		if httpOK && hasUnknownKeys(http, map[string]bool{"href": true, "method": true, "request": true, "response_content_types": true}) {
+			continue
+		}
+		request, requestOK := http["request"].(map[string]any)
+		if requestOK && hasUnknownKeys(request, map[string]bool{"content_type": true, "schema": true}) {
+			continue
+		}
+		schema, schemaOK := request["schema"].(map[string]any)
+		if schemaOK && hasUnknownKeys(schema, map[string]bool{"url": true}) {
+			continue
+		}
+		openAPI, openAPIOK := object["openapi"].(map[string]any)
+		if openAPIOK && hasUnknownKeys(openAPI, map[string]bool{"operation_id": true, "url": true}) {
+			continue
+		}
+		method, methodOK := http["method"].(string)
+		if !objectOK || !httpOK || !methodOK || method == "GET" || method == "POST" {
+			filtered = append(filtered, action)
+		}
+	}
+	if len(filtered) == 0 {
+		delete(document, "actions")
+	} else {
+		document["actions"] = filtered
+	}
+}
+
+func hasUnknownKeys(object map[string]any, allowed map[string]bool) bool {
+	for key := range object {
+		if !allowed[key] {
+			return true
+		}
+	}
+	return false
+}
+
+func filterDefinitions(document map[string]any, recognized func(map[string]any) bool) {
+	items, ok := document["items"].([]any)
+	if !ok {
+		return
+	}
+	filtered := items[:0]
+	for _, item := range items {
+		object, objectOK := item.(map[string]any)
+		if !objectOK || recognized(object) {
+			filtered = append(filtered, item)
+		}
+	}
+	document["items"] = filtered
+}
+
+func knownFilter(definition map[string]any) bool {
+	types := map[string]bool{"boolean": true, "date": true, "date-time": true, "decimal": true, "integer": true, "number": true, "string": true}
+	if value, ok := definition["type"].(string); ok && !types[value] {
+		return false
+	}
+	operators := map[string]bool{"eq": true, "exists": true, "gt": true, "gte": true, "in": true, "lt": true, "lte": true}
+	if values, ok := definition["operators"].([]any); ok {
+		for _, value := range values {
+			if operator, operatorOK := value.(string); operatorOK && !operators[operator] {
+				return false
+			}
+		}
+	}
+	if unit, ok := definition["unit"].(map[string]any); ok {
+		if system, systemOK := unit["system"].(string); systemOK && system != "service" && system != "ucum" {
+			return false
+		}
+	}
+	return true
+}
+
+func knownSort(definition map[string]any) bool {
+	keys, ok := definition["keys"].([]any)
+	if !ok {
+		return true
+	}
+	for _, value := range keys {
+		key, keyOK := value.(map[string]any)
+		if !keyOK {
+			continue
+		}
+		direction, directionOK := key["direction"].(string)
+		missing, missingOK := key["missing"].(string)
+		if directionOK && direction != "ascending" && direction != "descending" ||
+			missingOK && missing != "first" && missing != "last" {
+			return false
+		}
+	}
+	return true
+}
+
+func filterProblemParameters(document map[string]any) {
+	parameters, ok := document["invalid_params"].([]any)
+	if !ok {
+		return
+	}
+	recognized := map[string]bool{"body": true, "header": true, "path": true, "query": true}
+	filtered := parameters[:0]
+	for _, parameter := range parameters {
+		object, objectOK := parameter.(map[string]any)
+		location, locationOK := object["in"].(string)
+		if !objectOK || !locationOK || recognized[location] {
+			filtered = append(filtered, parameter)
+		}
+	}
+	document["invalid_params"] = filtered
+}
+
+func filterAgentProtocols(document map[string]any) {
+	protocols, ok := document["protocols"].(map[string]any)
+	if !ok {
+		return
+	}
+	filterAgentProtocolCategory(protocols, "enrollment", map[string]bool{"aep": true})
+	filterAgentProtocolCategory(protocols, "payments", map[string]bool{"mpp": true, "x402": true})
+	filterAgentProtocolCategory(protocols, "trust", map[string]bool{"tap": true})
+	if len(protocols) == 0 {
+		delete(document, "protocols")
+	}
+}
+
+func filterAgentProtocolCategory(protocols map[string]any, category string, recognized map[string]bool) {
+	descriptors, ok := protocols[category].([]any)
+	if !ok {
+		return
+	}
+	filtered := descriptors[:0]
+	for _, descriptor := range descriptors {
+		object, objectOK := descriptor.(map[string]any)
+		name, nameOK := object["name"].(string)
+		if !objectOK || !nameOK || recognized[name] {
+			filtered = append(filtered, descriptor)
+		}
+	}
+	if len(filtered) == 0 && len(descriptors) != 0 {
+		delete(protocols, category)
+		return
+	}
+	protocols[category] = filtered
+}
+
 func ParseCollection(data []byte) (Collection, error) {
 	return parseJSON(data, "collection.schema.json", "Collection", representationIssues[Collection])
 }
