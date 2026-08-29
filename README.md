@@ -147,6 +147,10 @@ their catalogs with bounded concurrency, and emits results in directory order.
 Service Documents can advertise supported trust protocols. Visa Trusted Agent Protocol support is
 represented by `ServiceProtocols.Trust` containing `TrustProtocol{Name: ProtocolTAP}`.
 
+`ParseServiceDocument` is the strict current-version Service parser. Agents use
+`ParseAgentServiceDocument`, which filters unrecognized enrollment, payment, and trust descriptors
+while retaining strict validation for recognized descriptors.
+
 Run the small Service and Agent examples in separate terminals:
 
 ```sh

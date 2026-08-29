@@ -2,7 +2,7 @@
   "id": "pagination-contract",
   "title": "Page envelope, continuation, ordering, and caching",
   "drafts": [
-    "draft-kavian-offering-discovery-protocol-00"
+    "draft-kavian-offering-discovery-protocol-01"
   ],
   "category": "pagination",
   "applies_to": [

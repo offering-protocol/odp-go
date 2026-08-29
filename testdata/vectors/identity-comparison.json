@@ -3,7 +3,7 @@
   "title": "Structured resource identity comparison",
   "description": "Agents compare Service origin, resource type, and local identifier without using the resource URL.",
   "drafts": [
-    "draft-kavian-offering-discovery-protocol-00"
+    "draft-kavian-offering-discovery-protocol-01"
   ],
   "category": "identity",
   "applies_to": [

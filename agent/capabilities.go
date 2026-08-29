@@ -201,7 +201,11 @@ func duplicateSortIDs(values []odp.SortDefinition, existing map[string]odp.SortD
 func (client *ServiceClient) loadFilterPages(ctx context.Context, reference string) ([]odp.FilterDefinition, error) {
 	values := []odp.FilterDefinition{}
 	err := client.loadCapabilityPages(ctx, reference, func(data []byte) (string, error) {
-		page, err := odp.ParseFilterDefinitionPage(data)
+		filtered, err := odp.NormalizeAgentResponse(data, "filter-page")
+		if err != nil {
+			return "", err
+		}
+		page, err := odp.ParseFilterDefinitionPage(filtered)
 		if err == nil {
 			values = append(values, page.Items...)
 		}
@@ -213,7 +217,11 @@ func (client *ServiceClient) loadFilterPages(ctx context.Context, reference stri
 func (client *ServiceClient) loadSortPages(ctx context.Context, reference string) ([]odp.SortDefinition, error) {
 	values := []odp.SortDefinition{}
 	err := client.loadCapabilityPages(ctx, reference, func(data []byte) (string, error) {
-		page, err := odp.ParseSortDefinitionPage(data)
+		filtered, err := odp.NormalizeAgentResponse(data, "sort-page")
+		if err != nil {
+			return "", err
+		}
+		page, err := odp.ParseSortDefinitionPage(filtered)
 		if err == nil {
 			values = append(values, page.Items...)
 		}

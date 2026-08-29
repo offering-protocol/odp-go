@@ -111,6 +111,9 @@ behavior of their database or remote-system operations. Each function receives t
 The package owns no background workers and requires no separate shutdown call. The hosting HTTP
 server owns listener shutdown, connection draining, and operational telemetry.
 
+Service Document construction uses strict current-version validation. Unknown enrollment, payment,
+and trust protocol names are rejected.
+
 ## Related documentation
 
 - [Protocol models and validation](../README.md#protocol-core)

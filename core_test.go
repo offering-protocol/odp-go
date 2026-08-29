@@ -98,6 +98,31 @@ func TestServiceDocumentParsesTrustProtocols(t *testing.T) {
 	}
 }
 
+func TestAgentServiceDocumentFiltersUnknownProtocols(t *testing.T) {
+	data := []byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"enrollment":[{"name":"future-enrollment"},{"name":"aep"}],"payments":[{"authentication":"not-required","name":"future-payment"},{"authentication":"not-required","name":"mpp"},{"authentication":"not-required","name":"x402"}],"trust":[{"name":"future-trust"},{"name":"tap"}]}}`)
+	if _, err := odp.ParseServiceDocument(data); err == nil {
+		t.Fatal("ParseServiceDocument() accepted unknown protocol names")
+	}
+	document, err := odp.ParseAgentServiceDocument(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Protocols == nil || len(document.Protocols.Enrollment) != 1 || document.Protocols.Enrollment[0].Name != odp.ProtocolAEP || len(document.Protocols.Payments) != 2 || len(document.Protocols.Trust) != 1 || document.Protocols.Trust[0].Name != odp.ProtocolTAP {
+		t.Fatalf("protocols = %#v", document.Protocols)
+	}
+
+	unknownOnly := []byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"trust":[{"name":"future-trust"}]}}`)
+	document, err = odp.ParseAgentServiceDocument(unknownOnly)
+	if err != nil || document.Protocols != nil {
+		t.Fatalf("unknown-only document = %#v, error = %v", document.Protocols, err)
+	}
+
+	malformedKnown := []byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":{"trust":[{"name":"tap","unexpected":true}]}}`)
+	if _, err := odp.ParseAgentServiceDocument(malformedKnown); err == nil {
+		t.Fatal("ParseAgentServiceDocument() accepted malformed known protocol")
+	}
+}
+
 func TestServiceDocumentParsesPaymentOrigins(t *testing.T) {
 	document, err := odp.ParseServiceDocument([]byte(`{"description":"Catalog","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Example","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"payment_origins":["https://payments.example.com"]}`))
 	if err != nil {

@@ -108,14 +108,14 @@ func (client *ServiceClient) Inspect(ctx context.Context) (Inspection, error) {
 		if jsonvalue.Depth(data) > maximumDocumentDepth {
 			return errors.New("ODP Service Document exceeds its nesting-depth limit")
 		}
-		_, err := odp.ParseServiceDocument(data)
+		_, err := odp.ParseAgentServiceDocument(data)
 		return err
 	}
 	result, err := request(ctx, client.client, http.MethodGet, target, nil, client.acceptLanguage, client.maxRedirects, maximumDocumentBytes, client.cache, cacheKey(client.partition, http.MethodGet, target, client.acceptLanguage, nil), client.fallbacks.ServiceDocument, validate)
 	if err != nil {
 		return Inspection{}, err
 	}
-	document, err := odp.ParseServiceDocument(result.body)
+	document, err := odp.ParseAgentServiceDocument(result.body)
 	if err != nil {
 		return Inspection{}, err
 	}
@@ -172,7 +172,7 @@ func (client *ServiceClient) GetCollection(ctx context.Context, id string, repre
 	if err != nil {
 		return odp.Collection{}, err
 	}
-	collection, err := odp.ParseCollection(data)
+	collection, err := parseAgentCollection(data)
 	if err != nil {
 		return odp.Collection{}, err
 	}
@@ -248,7 +248,7 @@ func (client *ServiceClient) getOffering(ctx context.Context, id string, represe
 	if err != nil {
 		return odp.Offering{}, Inspection{}, err
 	}
-	offering, err := odp.ParseOffering(data)
+	offering, err := parseAgentOffering(data)
 	if err != nil {
 		return odp.Offering{}, Inspection{}, err
 	}
@@ -283,13 +283,13 @@ func (client *ServiceClient) getWithInspection(ctx context.Context, inspection I
 			return errors.New("ODP response exceeds its nesting-depth limit")
 		}
 		if operation == odp.OperationGetCollection {
-			collection, err := odp.ParseCollection(data)
+			collection, err := parseAgentCollection(data)
 			if err != nil {
 				return err
 			}
 			return requireCollectionRepresentation(collection, defaultRepresentation(representation, odp.RepresentationFull))
 		}
-		offering, err := odp.ParseOffering(data)
+		offering, err := parseAgentOffering(data)
 		if err != nil {
 			return err
 		}
@@ -663,7 +663,7 @@ func (client *ServiceClient) continueRequest(ctx context.Context, reference stri
 }
 
 func parseCollectionPage(data []byte, representation odp.Representation) (odp.Page[odp.Collection], error) {
-	page, err := odp.ParsePage[odp.Collection](data)
+	page, err := parseAgentCollectionPage(data)
 	if err != nil {
 		return odp.Page[odp.Collection]{}, err
 	}
@@ -679,7 +679,7 @@ func parseCollectionPage(data []byte, representation odp.Representation) (odp.Pa
 		if err != nil {
 			return odp.Page[odp.Collection]{}, err
 		}
-		validated, err := odp.ParseCollection(encoded)
+		validated, err := parseAgentCollection(encoded)
 		if err != nil {
 			return odp.Page[odp.Collection]{}, err
 		}
@@ -692,13 +692,13 @@ func parseCollectionPage(data []byte, representation odp.Representation) (odp.Pa
 
 func parseOfferingPage(data []byte, search bool, representation odp.Representation) (odp.OfferingPage[odp.Offering], error) {
 	if search {
-		page, err := odp.ParseOfferingSearchResponse(data)
+		page, err := parseAgentOfferingSearchResponse(data)
 		if err != nil {
 			return odp.OfferingPage[odp.Offering]{}, err
 		}
 		return validateOfferingPage(page, representation)
 	}
-	page, err := odp.ParsePage[odp.Offering](data)
+	page, err := parseAgentOfferingPage(data)
 	if err != nil {
 		return odp.OfferingPage[odp.Offering]{}, err
 	}
@@ -718,7 +718,7 @@ func validateOfferingPage(page odp.OfferingPage[odp.Offering], representation od
 		if err != nil {
 			return odp.OfferingPage[odp.Offering]{}, err
 		}
-		validated, err := odp.ParseOffering(encoded)
+		validated, err := parseAgentOffering(encoded)
 		if err != nil {
 			return odp.OfferingPage[odp.Offering]{}, err
 		}
@@ -793,6 +793,46 @@ func validateListOptions(options ListOptions) error {
 		return errors.New("representation must be terse or full")
 	}
 	return nil
+}
+
+func parseAgentCollection(data []byte) (odp.Collection, error) {
+	filtered, err := odp.NormalizeAgentResponse(data, "collection")
+	if err != nil {
+		return odp.Collection{}, err
+	}
+	return odp.ParseCollection(filtered)
+}
+
+func parseAgentOffering(data []byte) (odp.Offering, error) {
+	filtered, err := odp.NormalizeAgentResponse(data, "offering")
+	if err != nil {
+		return odp.Offering{}, err
+	}
+	return odp.ParseOffering(filtered)
+}
+
+func parseAgentCollectionPage(data []byte) (odp.Page[odp.Collection], error) {
+	filtered, err := odp.NormalizeAgentResponse(data, "collection-page")
+	if err != nil {
+		return odp.Page[odp.Collection]{}, err
+	}
+	return odp.ParsePage[odp.Collection](filtered)
+}
+
+func parseAgentOfferingPage(data []byte) (odp.Page[odp.Offering], error) {
+	filtered, err := odp.NormalizeAgentResponse(data, "offering-page")
+	if err != nil {
+		return odp.Page[odp.Offering]{}, err
+	}
+	return odp.ParsePage[odp.Offering](filtered)
+}
+
+func parseAgentOfferingSearchResponse(data []byte) (odp.OfferingPage[odp.Offering], error) {
+	filtered, err := odp.NormalizeAgentResponse(data, "offering-page")
+	if err != nil {
+		return odp.OfferingPage[odp.Offering]{}, err
+	}
+	return odp.ParseOfferingSearchResponse(filtered)
 }
 
 func supports(document odp.ServiceDocument, operation odp.Operation) bool {

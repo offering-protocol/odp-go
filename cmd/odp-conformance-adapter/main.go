@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"sync/atomic"
@@ -113,6 +114,8 @@ func evaluateCase(subject string, test map[string]json.RawMessage, role string) 
 			return false, false, nil
 		}
 		return parseResult(test, "request", odp.ParseCollectionSearchRequest)
+	case "composition-contract":
+		return evaluateComposition(test, role)
 	case "offering-search-contract":
 		if operation(test) != "validate-request" {
 			return false, false, nil
@@ -141,6 +144,99 @@ func evaluateCase(subject string, test map[string]json.RawMessage, role string) 
 	default:
 		return false, false, nil
 	}
+}
+
+func evaluateComposition(test map[string]json.RawMessage, role string) (bool, bool, error) {
+	switch operation(test) {
+	case "normalize-agent-response":
+		if role != "agent" {
+			return false, false, nil
+		}
+		document, documentErr := requiredField[json.RawMessage](test, "document")
+		kind, kindErr := requiredField[string](test, "kind")
+		expected, expectedErr := requiredField[json.RawMessage](test, "expected")
+		if err := errors.Join(documentErr, kindErr, expectedErr); err != nil {
+			return false, true, err
+		}
+		actual, err := odp.NormalizeAgentResponse(document, kind)
+		if err != nil {
+			return false, true, err
+		}
+		if err := validateAgentResponse(actual, kind); err != nil {
+			return false, true, err
+		}
+		return jsonEqual(actual, expected), true, nil
+	case "validate-advertisement":
+		protocols, err := requiredField[json.RawMessage](test, "protocols")
+		if err != nil {
+			return false, true, err
+		}
+		document := serviceDocumentWithProtocols(protocols)
+		_, parseErr := odp.ParseServiceDocument(document)
+		valid, _ := field[bool](test, "valid")
+		return (parseErr == nil) == valid, true, nil
+	case "filter-advertisement":
+		if role != "agent" {
+			return false, false, nil
+		}
+		protocols, protocolsErr := requiredField[json.RawMessage](test, "protocols")
+		expected, expectedErr := requiredField[json.RawMessage](test, "expected")
+		if err := errors.Join(protocolsErr, expectedErr); err != nil {
+			return false, true, err
+		}
+		document, err := odp.ParseAgentServiceDocument(serviceDocumentWithProtocols(protocols))
+		if err != nil {
+			return false, true, err
+		}
+		actual, err := json.Marshal(document.Protocols)
+		if document.Protocols == nil {
+			actual = []byte("{}")
+		}
+		return jsonEqual(actual, expected), true, err
+	default:
+		return false, false, nil
+	}
+}
+
+func validateAgentResponse(document []byte, kind string) error {
+	switch kind {
+	case "service-document":
+		_, err := odp.ParseAgentServiceDocument(document)
+		return err
+	case "collection":
+		_, err := odp.ParseCollection(document)
+		return err
+	case "offering":
+		_, err := odp.ParseOffering(document)
+		return err
+	case "collection-page":
+		_, err := odp.ParsePage[odp.Collection](document)
+		return err
+	case "offering-page":
+		_, err := odp.ParsePage[odp.Offering](document)
+		return err
+	case "filter-page":
+		_, err := odp.ParseFilterDefinitionPage(document)
+		return err
+	case "sort-page":
+		_, err := odp.ParseSortDefinitionPage(document)
+		return err
+	case "problem":
+		_, err := odp.ParseProblemDetails(document)
+		return err
+	default:
+		return errors.New("unknown Agent response kind")
+	}
+}
+
+func serviceDocumentWithProtocols(protocols json.RawMessage) []byte {
+	return fmt.Appendf(nil, `{"description":"ODP Go conformance adapter","http":{"endpoint_base":"/odp"},"language":"en","localizations":["en"],"name":"Conformance Service","odp_version":"1.0","operations":[{"authentication":"not-required","name":"get-offering"},{"authentication":"not-required","name":"list-offerings"}],"protocols":%s}`, protocols)
+}
+
+func jsonEqual(left, right []byte) bool {
+	var leftValue any
+	var rightValue any
+	return json.Unmarshal(left, &leftValue) == nil && json.Unmarshal(right, &rightValue) == nil && reflect.DeepEqual(leftValue, rightValue)
 }
 
 type schemaResponse struct {

@@ -3,7 +3,7 @@
   "title": "Service-managed local resource identifiers",
   "description": "Local identifiers are bounded, path-safe ASCII strings selected by the Service.",
   "drafts": [
-    "draft-kavian-offering-discovery-protocol-00"
+    "draft-kavian-offering-discovery-protocol-01"
   ],
   "category": "identity",
   "applies_to": [
