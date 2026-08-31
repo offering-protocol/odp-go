@@ -633,7 +633,7 @@ func ParseOffering(data []byte) (Offering, error) {
 }
 
 func ParseProblemDetails(data []byte) (ProblemDetails, error) {
-	return parseJSON[ProblemDetails](data, "problem-details.schema.json", "Problem Details", nil)
+	return parseJSON(data, "problem-details.schema.json", "Problem Details", problemDetailsIssues)
 }
 
 func ParseProblemResponse(data []byte, status int) (ProblemDetails, error) {
@@ -817,6 +817,17 @@ func representationIssues[Value resourceRepresentation](value Value) []Validatio
 		imageSources[image.Source] = struct{}{}
 	}
 	return issues
+}
+
+func problemDetailsIssues(value ProblemDetails) []ValidationIssue {
+	expectedType := "https://offeringprotocol.org/problems/" + strings.ToLower(strings.ReplaceAll(value.Code, "_", "-"))
+	if value.Type == expectedType {
+		return nil
+	}
+	return []ValidationIssue{{
+		Keyword: "problem-type", Message: "must correspond to the problem code",
+		Params: map[string]any{"expectedType": expectedType}, Path: "/type",
+	}}
 }
 
 func filterDefinitionIssues(value FilterDefinition) []ValidationIssue {

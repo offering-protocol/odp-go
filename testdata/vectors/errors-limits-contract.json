@@ -42,6 +42,29 @@
       "valid": false
     },
     {
+      "name": "missing-problem-title",
+      "operation": "validate-problem",
+      "http_status": 400,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/invalid-request",
+        "status": 400,
+        "code": "INVALID_REQUEST"
+      },
+      "valid": false
+    },
+    {
+      "name": "problem-type-code-mismatch",
+      "operation": "validate-problem",
+      "http_status": 400,
+      "problem": {
+        "type": "https://offeringprotocol.org/problems/not-found",
+        "title": "Invalid request",
+        "status": 400,
+        "code": "INVALID_REQUEST"
+      },
+      "valid": false
+    },
+    {
       "name": "status-mismatch",
       "operation": "validate-problem",
       "http_status": 400,
