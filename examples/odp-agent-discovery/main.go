@@ -46,6 +46,23 @@ func main() {
 		}
 		printJSON("ODP Service Document", inspection.Document)
 	}
+	for result, err := range mock.client.Search(ctx, directory.DirectorySearchRequest{}, directory.IterationOptions{}).Items {
+		if err != nil {
+			log.Fatal(err)
+		}
+		switch result.Type {
+		case "service":
+			fmt.Printf("Directory Service: %s\n", result.Service.Name)
+		case "collection":
+			full, err := mock.serviceClients[result.Service.ServiceOrigin].GetCollection(ctx, result.Collection.ID, "full")
+			if err != nil {
+				log.Fatal(err)
+			}
+			printJSON("Full Collection from "+result.Service.Name, full)
+		default:
+			fmt.Printf("Unsupported Directory result type: %s\n", result.Type)
+		}
+	}
 
 	odpAgent, err := agent.New(agent.AgentOptions{
 		Directory: mock.client,

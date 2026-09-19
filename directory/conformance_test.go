@@ -39,10 +39,10 @@ func always(body string) func(*http.Request) (*http.Response, error) {
 	}
 }
 
-func collectPages(sequence func(func(directory.SearchPage, error) bool)) ([]directory.SearchPage, error) {
-	var pages []directory.SearchPage
+func collectPages(sequence func(func(directory.SearchResponse[directory.Service], error) bool)) ([]directory.SearchResponse[directory.Service], error) {
+	var pages []directory.SearchResponse[directory.Service]
 	var failure error
-	sequence(func(value directory.SearchPage, err error) bool {
+	sequence(func(value directory.SearchResponse[directory.Service], err error) bool {
 		if err != nil {
 			failure = err
 			return false
@@ -78,7 +78,7 @@ func TestServiceOriginsMustBePublicAndSecure(t *testing.T) {
 	}
 	for _, origin := range refused {
 		body := page(strings.Replace(record, "https://compute.example", origin, 1))
-		pages, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		pages, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err != nil {
 			t.Fatalf("%s: %v", origin, err)
 		}
@@ -88,7 +88,7 @@ func TestServiceOriginsMustBePublicAndSecure(t *testing.T) {
 	}
 	for _, origin := range []string{"https://compute.example", "https://8.8.8.8"} {
 		body := page(strings.Replace(record, "https://compute.example", origin, 1))
-		pages, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		pages, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err != nil || len(pages[0].Items) != 1 {
 			t.Errorf("%s: page = %#v, %v", origin, pages, err)
 		}
@@ -100,7 +100,7 @@ func TestUnverifiedServiceDocumentMembersDoNotReachTheCaller(t *testing.T) {
 	// assert must not arrive looking like something the caller may act on.
 	members := `"http":{"endpoint_base":"/evil"},"odp_version":"9.9","mcp":[{"name":"x","type":"streamable-http","url":"/mcp"}],` +
 		`"payment_origins":["https://evil.example"],"search_capabilities":{"filters":{"inline":[]}},"branding":{},"rank":3`
-	pages, err := collectPages(serve(t, always(page(recordWith(members)))).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(page(recordWith(members)))).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(pages[0].Items) != 1 {
 		t.Fatalf("pages = %#v, %v", pages, err)
 	}
@@ -116,7 +116,7 @@ func TestUnverifiedServiceDocumentMembersDoNotReachTheCaller(t *testing.T) {
 func TestOneUnusableRecordDoesNotDiscardItsPage(t *testing.T) {
 	broken := strings.Replace(record, `"name":"Compute"`, `"name":""`, 1)
 	body := page(broken + "," + record + "," + strings.Replace(record, "compute.example", "storage.example", 1))
-	pages, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestOneUnusableRecordDoesNotDiscardItsPage(t *testing.T) {
 	// An item traversal cannot see the page, so the issues reach it through the callback.
 	var seen []directory.Issue
 	options := directory.IterationOptions{OnIssue: func(issue directory.Issue) { seen = append(seen, issue) }}
-	services, err := collectServices(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, options))
+	services, err := collectServices(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, options).Items)
 	if err != nil || len(services) != 2 || len(seen) != 1 {
 		t.Fatalf("services = %d, issues = %#v, %v", len(services), seen, err)
 	}
@@ -145,30 +145,30 @@ func TestPaginationBudgetsAndResumption(t *testing.T) {
 	// A caller's own page budget stops the traversal without an error, and the last page keeps a
 	// continuation to resume from.
 	client := serve(t, handler)
-	pages, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 3}))
+	pages, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 3}).Responses)
 	if err != nil || len(pages) != 3 || pages[2].Next == "" {
 		t.Fatalf("pages = %d, err = %v", len(pages), err)
 	}
-	resumed, err := collectPages(client.ContinueSearchPages(t.Context(), pages[2].Next, directory.IterationOptions{MaxPages: 2}))
+	resumed, err := collectPages(client.ContinueSearchServices(t.Context(), pages[2].Next, directory.IterationOptions{MaxPages: 2}).Responses)
 	if err != nil || len(resumed) != 2 {
 		t.Fatalf("resumed = %d, err = %v", len(resumed), err)
 	}
-	services, err := collectServices(client.ContinueSearchServices(t.Context(), pages[2].Next, directory.IterationOptions{MaxItems: 2}))
+	services, err := collectServices(client.ContinueSearchServices(t.Context(), pages[2].Next, directory.IterationOptions{MaxItems: 2}).Items)
 	if err != nil || len(services) != 2 {
 		t.Fatalf("resumed services = %d, err = %v", len(services), err)
 	}
 	// A page budget above the old sixteen is honoured rather than refused.
-	many, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 40}))
+	many, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 40}).Responses)
 	if err != nil || len(many) != 40 {
 		t.Fatalf("pages = %d, err = %v", len(many), err)
 	}
-	if _, err := collectPages(client.ContinueSearchPages(t.Context(), "https://evil.example/p", directory.IterationOptions{})); err == nil {
+	if _, err := collectPages(client.ContinueSearchServices(t.Context(), "https://evil.example/p", directory.IterationOptions{}).Responses); err == nil {
 		t.Fatal("off-origin continuation resumed")
 	}
-	if _, err := collectServices(client.ContinueSearchServices(t.Context(), "x", directory.IterationOptions{MaxItems: -1})); err == nil {
+	if _, err := collectServices(client.ContinueSearchServices(t.Context(), "x", directory.IterationOptions{MaxItems: -1}).Items); err == nil {
 		t.Fatal("invalid item budget accepted")
 	}
-	if _, err := collectPages(client.ContinueSearchPages(t.Context(), "x", directory.IterationOptions{MaxPages: -1})); err == nil {
+	if _, err := collectPages(client.ContinueSearchServices(t.Context(), "x", directory.IterationOptions{MaxPages: -1}).Responses); err == nil {
 		t.Fatal("invalid page budget accepted")
 	}
 }
@@ -179,7 +179,7 @@ func TestItemBudgetOnAPageBoundaryDoesNotFetchAnotherPage(t *testing.T) {
 		requests++
 		return response(http.StatusOK, `{"items":[`+record+`,`+strings.Replace(record, "compute.example", "storage.example", 1)+`],"next":"/v1/services/search?cursor=next"}`, nil), nil
 	})
-	services, err := collectServices(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxItems: 2}))
+	services, err := collectServices(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxItems: 2}).Items)
 	if err != nil || len(services) != 2 {
 		t.Fatalf("services = %d, err = %v", len(services), err)
 	}
@@ -204,7 +204,7 @@ func TestContinuationsMustAdvanceAndStayOnOrigin(t *testing.T) {
 		client := serve(t, func(*http.Request) (*http.Response, error) {
 			return response(http.StatusOK, `{"items":[`+record+`],"next":"`+test.next+`"}`, nil), nil
 		})
-		_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err == nil || !strings.Contains(err.Error(), test.wantErr) {
 			t.Errorf("%s: error = %v, want %q", name, err, test.wantErr)
 		}
@@ -219,7 +219,7 @@ func TestContinuationsMustAdvanceAndStayOnOrigin(t *testing.T) {
 		}
 		return response(http.StatusOK, `{"items":[`+record+`]}`, nil), nil
 	})
-	pages, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(pages) != 2 {
 		t.Fatalf("pages = %d, err = %v", len(pages), err)
 	}
@@ -272,7 +272,7 @@ func TestFailureMessagesAreSafeToLog(t *testing.T) {
 		client := serve(t, func(*http.Request) (*http.Response, error) {
 			return response(test.status, test.body, headers), nil
 		})
-		_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		var failure *directory.RequestError
 		if !errors.As(err, &failure) {
 			t.Errorf("%s: error = %v", name, err)
@@ -290,7 +290,7 @@ func TestOverlongFailureDetailIsTruncated(t *testing.T) {
 	client := serve(t, func(*http.Request) (*http.Response, error) {
 		return response(http.StatusBadRequest, `{"detail":"`+strings.Repeat("x", 4000)+`"}`, headers), nil
 	})
-	_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err == nil || !strings.HasSuffix(err.Error(), "…") || len([]rune(err.Error())) > 2_100 {
 		t.Fatalf("message length = %d", len([]rune(err.Error())))
 	}
@@ -342,11 +342,11 @@ func TestFacetMembersAreCheckedByName(t *testing.T) {
 	// encoding/json matches member names case-insensitively, so counting members is not the same
 	// as knowing which members arrived.
 	body := `{"items":[],"facets":{"payment_options":[{"count":1,"value":{"NAME":"mpp","OPTION":"base"}}]}}`
-	if _, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err == nil {
+	if _, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err == nil {
 		t.Fatal("mis-cased payment option facet accepted")
 	}
 	valid := `{"items":[],"facets":{"payment_options":[{"count":1,"value":{"name":"mpp","option":"base"}}]}}`
-	pages, err := collectPages(serve(t, always(valid)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(valid)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || pages[0].Facets == nil || len(pages[0].Facets.PaymentOptions) != 1 {
 		t.Fatalf("facets = %#v, %v", pages, err)
 	}
@@ -371,13 +371,13 @@ func TestFacetShapesAreValidated(t *testing.T) {
 		"facet not an array":     `{"items":[],"facets":{"keywords":{}}}`,
 	}
 	for name, body := range cases {
-		if _, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err == nil {
+		if _, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
 	// A count written with an exponent is still a whole number.
 	body := `{"items":[],"facets":{"keywords":[{"count":1e3,"value":"gpu"}]}}`
-	pages, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || pages[0].Facets.Keywords[0].Count != 1000 {
 		t.Fatalf("facets = %#v, %v", pages, err)
 	}
@@ -385,7 +385,7 @@ func TestFacetShapesAreValidated(t *testing.T) {
 		`"enrollment":[{"count":1,"value":{"name":"aep"}}],` +
 		`"operations":[{"count":1,"value":{"authentication":"not-required","name":"list-offerings"}}],` +
 		`"payments":[{"count":1,"value":{"authentication":"required","name":"x402"}}]}}`
-	pages, err = collectPages(serve(t, always(full)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err = collectPages(serve(t, always(full)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,7 +414,7 @@ func TestServiceRecordsAreValidatedMemberByMember(t *testing.T) {
 		"not an object":         `[]`,
 	}
 	for name, item := range cases {
-		pages, err := collectPages(serve(t, always(page(item))).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		pages, err := collectPages(serve(t, always(page(item))).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err != nil {
 			t.Errorf("%s: %v", name, err)
 			continue
@@ -426,7 +426,7 @@ func TestServiceRecordsAreValidatedMemberByMember(t *testing.T) {
 	// An unrecognised protocol is filtered out rather than making the record unusable, so the
 	// Service survives with the protocols this version understands.
 	unknown := recordWith(`"protocols":{"trust":[{"name":"tap"}],"payments":[{"authentication":"required","name":"other"}]}`)
-	filtered, err := collectPages(serve(t, always(page(unknown))).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	filtered, err := collectPages(serve(t, always(page(unknown))).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(filtered[0].Items) != 1 {
 		t.Fatalf("unknown protocol = %#v, %v", filtered, err)
 	}
@@ -436,7 +436,7 @@ func TestServiceRecordsAreValidatedMemberByMember(t *testing.T) {
 
 	// RFC 3339 permits a lowercase separator and zone designator.
 	lowercase := strings.Replace(record, "2026-01-01T00:00:00Z", "2026-01-01t00:00:00z", 1)
-	pages, err := collectPages(serve(t, always(page(lowercase))).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(page(lowercase))).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(pages[0].Items) != 1 {
 		t.Fatalf("lowercase date-time = %#v, %v", pages, err)
 	}
@@ -444,7 +444,7 @@ func TestServiceRecordsAreValidatedMemberByMember(t *testing.T) {
 	complete := recordWith(`"documentation_url":"https://compute.example/docs","keywords":["gpu"],` +
 		`"status_url":"https://compute.example/status","support_url":"https://compute.example/support",` +
 		`"website_url":"https://compute.example","protocols":{"trust":[{"name":"tap"}]}`)
-	pages, err = collectPages(serve(t, always(page(complete))).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err = collectPages(serve(t, always(page(complete))).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(pages[0].Items) != 1 {
 		t.Fatalf("complete record = %#v, %v", pages, err)
 	}
@@ -472,12 +472,12 @@ func TestPageEnvelopeIsValidated(t *testing.T) {
 		"next empty":     `{"items":[],"next":""}`,
 	}
 	for name, body := range cases {
-		if _, err := collectPages(serve(t, always(body)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err == nil {
+		if _, err := collectPages(serve(t, always(body)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
 	// A final page is commonly spelled with an explicit null continuation.
-	pages, err := collectPages(serve(t, always(`{"items":[],"next":null,"total":7}`)).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	pages, err := collectPages(serve(t, always(`{"items":[],"next":null,"total":7}`)).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil || len(pages) != 1 || pages[0].Next != "" {
 		t.Fatalf("pages = %#v, %v", pages, err)
 	}
@@ -502,15 +502,15 @@ func TestSearchRequestFiltersAreValidated(t *testing.T) {
 	// Every distinct operation-and-authentication pair is expressible, so the bound is on the pair
 	// rather than on the seven operation names.
 	accepted := directory.SearchRequest{Filters: &directory.ServiceFilters{Operations: operationFilters}}
-	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchPages(t.Context(), accepted, directory.IterationOptions{})); err != nil {
+	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchServices(t.Context(), accepted, directory.IterationOptions{}).Responses); err != nil {
 		t.Fatalf("21 operation filters rejected: %v", err)
 	}
 	payments := make([]directory.PaymentFilter, 0, 3)
 	for _, option := range []odp.PaymentOption{"base", "solana", "ethereum"} {
 		payments = append(payments, directory.PaymentFilter{Authentication: odp.AuthenticationRequired, Name: odp.ProtocolMPP, Options: []odp.PaymentOption{option}})
 	}
-	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchPages(t.Context(),
-		directory.SearchRequest{Filters: &directory.ServiceFilters{Payments: payments}}, directory.IterationOptions{})); err != nil {
+	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchServices(t.Context(),
+		directory.SearchRequest{Filters: &directory.ServiceFilters{Payments: payments}}, directory.IterationOptions{}).Responses); err != nil {
 		t.Fatalf("three payment filters rejected: %v", err)
 	}
 
@@ -539,12 +539,12 @@ func TestSearchRequestFiltersAreValidated(t *testing.T) {
 	}
 	for name, filters := range refused {
 		request := directory.SearchRequest{Filters: &filters}
-		if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchPages(t.Context(), request, directory.IterationOptions{})); err == nil {
+		if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchServices(t.Context(), request, directory.IterationOptions{}).Responses); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
-	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchPages(t.Context(),
-		directory.SearchRequest{Query: strings.Repeat("q", 513)}, directory.IterationOptions{})); err == nil {
+	if _, err := collectPages(serve(t, always(`{"items":[]}`)).SearchServices(t.Context(),
+		directory.SearchRequest{Query: strings.Repeat("q", 513)}, directory.IterationOptions{}).Responses); err == nil {
 		t.Error("overlong query accepted")
 	}
 }
@@ -552,7 +552,7 @@ func TestSearchRequestFiltersAreValidated(t *testing.T) {
 func TestRequestValidationReportsTheRequestBeforeTheBudget(t *testing.T) {
 	// A caller who fixes the budget should not then discover a second complaint about the body.
 	request := directory.SearchRequest{Limit: 9999}
-	_, err := collectPages(serve(t, always(`{"items":[]}`)).SearchPages(t.Context(), request, directory.IterationOptions{MaxPages: 99_999}))
+	_, err := collectPages(serve(t, always(`{"items":[]}`)).SearchServices(t.Context(), request, directory.IterationOptions{MaxPages: 99_999}).Responses)
 	if err == nil || !strings.Contains(err.Error(), "limit must be an integer from 1 through 100") {
 		t.Fatalf("error = %v", err)
 	}

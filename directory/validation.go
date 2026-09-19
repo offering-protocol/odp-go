@@ -37,26 +37,34 @@ var operations = []odp.Operation{
 }
 
 func validateSearchRequest(request SearchRequest) ([]byte, error) {
+	validated, err := normalizedSearchRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(validated)
+}
+
+func normalizedSearchRequest(request SearchRequest) (SearchRequest, error) {
 	validated := SearchRequest{}
 	if request.Query != "" {
 		query, err := requireText(request.Query, "query", 1, 512)
 		if err != nil {
-			return nil, err
+			return SearchRequest{}, err
 		}
 		validated.Query = query
 	}
 	if request.Limit < 0 || request.Limit > 100 {
-		return nil, errors.New("limit must be an integer from 1 through 100")
+		return SearchRequest{}, errors.New("limit must be an integer from 1 through 100")
 	}
 	validated.Limit = request.Limit
 	if request.Filters != nil {
 		filters, err := validateFilters(*request.Filters)
 		if err != nil {
-			return nil, err
+			return SearchRequest{}, err
 		}
 		validated.Filters = &filters
 	}
-	return json.Marshal(validated)
+	return validated, nil
 }
 
 func validateFilters(filters ServiceFilters) (ServiceFilters, error) {
@@ -83,42 +91,46 @@ func validateFilters(filters ServiceFilters) (ServiceFilters, error) {
 	return ServiceFilters{Enrollment: enrollment, Keywords: keywords, Operations: operationFilters, Payments: paymentFilters, Trust: trust}, nil
 }
 
-func parseSearchPage(data []byte) (SearchPage, error) {
+func parseSearchPage(data []byte) (SearchResponse[Service], error) {
+	return parsePage(data, parseService, IssueService)
+}
+
+func parsePage[Item any](data []byte, parse func([]byte) (Item, error), scope IssueScope) (SearchResponse[Item], error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(data, &object); err != nil {
-		return SearchPage{}, err
+		return SearchResponse[Item]{}, err
 	}
 	itemsData, present := object["items"]
 	if !present || string(itemsData) == "null" {
-		return SearchPage{}, errors.New("Directory search page items are invalid")
+		return SearchResponse[Item]{}, errors.New("Directory search page items are invalid")
 	}
 	var itemValues []json.RawMessage
 	if err := json.Unmarshal(itemsData, &itemValues); err != nil || len(itemValues) > 100 {
-		return SearchPage{}, errors.New("Directory search page items are invalid")
+		return SearchResponse[Item]{}, errors.New("Directory search page items are invalid")
 	}
-	items := make([]Service, 0, len(itemValues))
+	items := make([]Item, 0, len(itemValues))
 	var issues []Issue
 	for index, item := range itemValues {
-		parsed, err := parseService(item)
+		parsed, err := parse(item)
 		if err != nil {
-			issues = append(issues, Issue{Index: index, Message: err.Error(), Scope: IssueService})
+			issues = append(issues, Issue{Index: index, Message: err.Error(), Scope: scope})
 			continue
 		}
 		items = append(items, parsed)
 	}
 	next, err := optionalText(object["next"], "next", 2048)
 	if err != nil {
-		return SearchPage{}, err
+		return SearchResponse[Item]{}, err
 	}
 	var facets *Facets
 	if raw, ok := object["facets"]; ok {
 		parsed, err := parseFacets(raw)
 		if err != nil {
-			return SearchPage{}, err
+			return SearchResponse[Item]{}, err
 		}
 		facets = &parsed
 	}
-	return SearchPage{
+	return SearchResponse[Item]{
 		Additional: cloneAdditional(object, "items", "next", "facets"), Facets: facets,
 		Issues: issues, Items: items, Next: next,
 	}, nil

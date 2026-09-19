@@ -1,8 +1,9 @@
-// Package directory provides the canonical ODP Service directory client.
+// Package directory searches indexed Services and Collections in the canonical Directory.
 package directory
 
 import (
 	"encoding/json"
+	"iter"
 	"net/http"
 	"net/url"
 	"time"
@@ -52,6 +53,41 @@ type SearchRequest struct {
 	Query   string          `json:"query,omitempty"`
 }
 
+type DirectorySearchRequest struct {
+	SearchRequest
+	Types []string `json:"types,omitempty"`
+}
+
+type IndexedService struct {
+	Service
+	ServiceID string
+}
+
+type ServiceReference struct {
+	Additional    odp.AdditionalMembers
+	ServiceID     string
+	ServiceOrigin string
+	Name          string
+}
+
+type CollectionSummary struct {
+	Additional  odp.AdditionalMembers
+	ID          string
+	Name        string
+	Description string
+}
+
+// Result retains unknown resource types in Raw without interpreting them as Services.
+type Result struct {
+	Additional       odp.AdditionalMembers
+	Type             string
+	Service          *IndexedService
+	Collection       *CollectionSummary
+	AvailableThrough *ServiceReference
+	IndexedAt        time.Time
+	Raw              json.RawMessage
+}
+
 type IterationOptions struct {
 	MaxItems int
 	MaxPages int
@@ -96,20 +132,27 @@ type PaymentOptionFacetValue struct {
 	Option odp.PaymentOption `json:"option"`
 }
 
-type SearchPage struct {
+type SearchResponse[Item any] struct {
 	Additional odp.AdditionalMembers
 	Facets     *Facets
 	// Issues reports records this page carried that could not be used. They are reported rather
 	// than raised because a directory is not an ODP protocol role: one unusable record says
 	// nothing about the rest of the page.
 	Issues []Issue
-	Items  []Service
+	Items  []Item
 	Next   string
+}
+
+// SearchSequence exposes independent, lazy traversals of the same search.
+type SearchSequence[Item any] struct {
+	Items     iter.Seq2[Item, error]
+	Responses iter.Seq2[SearchResponse[Item], error]
 }
 
 type IssueScope string
 
 const IssueService IssueScope = "service"
+const IssueResult IssueScope = "result"
 
 // Issue describes one Directory record this client discarded, and why.
 type Issue struct {

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"iter"
 	"mime"
 	"net"
 	"net/http"
@@ -58,61 +57,48 @@ func New(options Options) (*Client, error) {
 	return &Client{environment: environment, httpClient: &httpClient, originURL: originURL}, nil
 }
 
-func (client *Client) SearchPages(ctx context.Context, request SearchRequest, options IterationOptions) iter.Seq2[SearchPage, error] {
+func (client *Client) SearchServices(ctx context.Context, request SearchRequest, options IterationOptions) SearchSequence[Service] {
 	body, validationError := validateSearchRequest(request)
 	maxPages, budgetError := pageBudget(options.MaxPages)
 	if validationError == nil {
 		validationError = budgetError
 	}
-	return func(yield func(SearchPage, error) bool) {
+	responses := func(yield func(SearchResponse[Service], error) bool) {
 		if validationError != nil {
-			yield(SearchPage{}, validationError)
+			yield(SearchResponse[Service]{}, validationError)
 			return
 		}
-		client.traverse(ctx, client.originURL.JoinPath("v1", "services", "search"), http.MethodPost, body, maxPages, yield)
+		traverse(client, ctx, client.originURL.JoinPath("v1", "services", "search"), http.MethodPost, body, maxPages, parseSearchPage, yield)
 	}
+	return sequence(responses, options)
 }
 
-// ContinueSearchPages resumes a traversal from the Next of a page a previous search yielded, so a
-// caller that stopped at its own page budget can pick the sequence up rather than start again.
-func (client *Client) ContinueSearchPages(ctx context.Context, next string, options IterationOptions) iter.Seq2[SearchPage, error] {
+func (client *Client) ContinueSearchServices(ctx context.Context, next string, options IterationOptions) SearchSequence[Service] {
 	maxPages, validationError := pageBudget(options.MaxPages)
-	return func(yield func(SearchPage, error) bool) {
+	responses := func(yield func(SearchResponse[Service], error) bool) {
 		if validationError != nil {
-			yield(SearchPage{}, validationError)
+			yield(SearchResponse[Service]{}, validationError)
 			return
 		}
 		target, err := client.continuationURL(next)
 		if err != nil {
-			yield(SearchPage{}, err)
+			yield(SearchResponse[Service]{}, err)
 			return
 		}
-		client.traverse(ctx, target, http.MethodGet, nil, maxPages, yield)
+		traverse(client, ctx, target, http.MethodGet, nil, maxPages, parseSearchPage, yield)
 	}
-}
-
-func (client *Client) SearchServices(ctx context.Context, request SearchRequest, options IterationOptions) iter.Seq2[Service, error] {
-	return func(yield func(Service, error) bool) {
-		if options.MaxItems < 0 || options.MaxItems > maximumItems {
-			yield(Service{}, fmt.Errorf("maxItems must be an integer from 1 through %d", maximumItems))
-			return
-		}
-		client.services(client.SearchPages(ctx, request, options), options, yield)
-	}
-}
-
-// ContinueSearchServices resumes an item traversal from a page's Next.
-func (client *Client) ContinueSearchServices(ctx context.Context, next string, options IterationOptions) iter.Seq2[Service, error] {
-	return func(yield func(Service, error) bool) {
-		if options.MaxItems < 0 || options.MaxItems > maximumItems {
-			yield(Service{}, fmt.Errorf("maxItems must be an integer from 1 through %d", maximumItems))
-			return
-		}
-		client.services(client.ContinueSearchPages(ctx, next, options), options, yield)
-	}
+	return sequence(responses, options)
 }
 
 func (client *Client) SuggestServices(ctx context.Context, request SuggestionRequest) ([]string, error) {
+	return client.suggest(ctx, "services", request)
+}
+
+func (client *Client) Suggest(ctx context.Context, request SuggestionRequest) ([]string, error) {
+	return client.suggest(ctx, "directory", request)
+}
+
+func (client *Client) suggest(ctx context.Context, resource string, request SuggestionRequest) ([]string, error) {
 	prefix, err := requireText(request.Prefix, "prefix", 1, 128)
 	if err != nil {
 		return nil, err
@@ -120,7 +106,7 @@ func (client *Client) SuggestServices(ctx context.Context, request SuggestionReq
 	if request.Limit < 0 || request.Limit > 25 {
 		return nil, errors.New("limit must be an integer from 1 through 25")
 	}
-	target := client.originURL.JoinPath("v1", "services", "suggestions")
+	target := client.originURL.JoinPath("v1", resource, "suggestions")
 	query := url.Values{"prefix": []string{prefix}}
 	if request.Limit != 0 {
 		query.Set("limit", strconv.Itoa(request.Limit))
@@ -145,19 +131,19 @@ func pageBudget(requested int) (int, error) {
 
 // traverse walks the continuation chain, yielding each page until the caller stops, the directory
 // stops offering one, or a budget runs out.
-func (client *Client) traverse(ctx context.Context, start *url.URL, method string, body []byte, maxPages int, yield func(SearchPage, error) bool) {
+func traverse[Item any](client *Client, ctx context.Context, start *url.URL, method string, body []byte, maxPages int, parse func([]byte) (SearchResponse[Item], error), yield func(SearchResponse[Item], error) bool) {
 	current := start
 	requestBody := body
 	visited := map[string]struct{}{}
 	for pageNumber := 0; pageNumber < maxPages; pageNumber++ {
 		data, err := client.requestJSON(ctx, method, current, requestBody)
 		if err != nil {
-			yield(SearchPage{}, err)
+			yield(SearchResponse[Item]{}, err)
 			return
 		}
-		page, err := parseSearchPage(data)
+		page, err := parse(data)
 		if err != nil {
-			yield(SearchPage{}, err)
+			yield(SearchResponse[Item]{}, err)
 			return
 		}
 		if !yield(page, nil) || page.Next == "" {
@@ -168,52 +154,26 @@ func (client *Client) traverse(ctx context.Context, start *url.URL, method strin
 		// never going to be requested.
 		if pageNumber+1 >= maxPages {
 			if maxPages == maximumPages {
-				yield(SearchPage{}, fmt.Errorf("Directory pagination exceeded its %d-page traversal limit", maximumPages))
+				yield(SearchResponse[Item]{}, fmt.Errorf("Directory pagination exceeded its %d-page traversal limit", maximumPages))
 			}
 			return
 		}
 		next, err := client.continuationURL(page.Next)
 		if err != nil {
-			yield(SearchPage{}, err)
+			yield(SearchResponse[Item]{}, err)
 			return
 		}
 		// A continuation has to advance. Without this a directory that repeats one link keeps the
 		// caller reading the same page until the budget runs out.
 		key := traversalKey(next)
 		if _, seen := visited[key]; seen {
-			yield(SearchPage{}, errors.New("Directory pagination loop detected"))
+			yield(SearchResponse[Item]{}, errors.New("Directory pagination loop detected"))
 			return
 		}
 		visited[key] = struct{}{}
 		current = next
 		method = http.MethodGet
 		requestBody = nil
-	}
-}
-
-func (client *Client) services(pages iter.Seq2[SearchPage, error], options IterationOptions, yield func(Service, error) bool) {
-	count := 0
-	for page, err := range pages {
-		if err != nil {
-			yield(Service{}, err)
-			return
-		}
-		for _, issue := range page.Issues {
-			if options.OnIssue != nil {
-				options.OnIssue(issue)
-			}
-		}
-		for _, service := range page.Items {
-			count++
-			if !yield(service, nil) {
-				return
-			}
-			// Checked after the yield: checking before it lets the enclosing loop pull another
-			// page whenever the budget falls exactly on a page boundary.
-			if options.MaxItems != 0 && count >= options.MaxItems {
-				return
-			}
-		}
 	}
 }
 
