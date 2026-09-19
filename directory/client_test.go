@@ -75,7 +75,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 		return response(http.StatusOK, `{"items":[`+serviceResult+`],"facets":{"enrollment":[{"value":{"name":"aep"},"count":1}],"keywords":[{"value":"gpu","count":1}],"operations":[{"value":{"authentication":"required","name":"get-offering"},"count":1}],"payment_options":[{"value":{"name":"mpp","option":"inflow"},"count":1},{"value":{"name":"mpp","option":"solana"},"count":1}],"payments":[{"value":{"authentication":"not-required","name":"mpp","options":["inflow","solana"]},"count":1}],"trust":[{"value":{"name":"tap"},"count":1}]}}`, nil), nil
 	})
 
-	pages := client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{
+	pages := client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{
 		Query: "compute",
 		Filters: &directory.ServiceFilters{
 			Enrollment: []odp.EnrollmentProtocol{{Name: odp.ProtocolAEP}},
@@ -87,7 +87,7 @@ func TestSearchPagesUsesCanonicalOriginAndStructuredFilters(t *testing.T) {
 			Trust: []odp.TrustProtocol{{Name: odp.ProtocolTAP}},
 		},
 		Limit: 25,
-	}, directory.IterationOptions{})
+	}, directory.IterationOptions{}).Responses
 	page, err := first(pages)
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +127,7 @@ func TestSearchPagesUsesSandboxOnlyWhenSelected(t *testing.T) {
 	if value.Environment() != directory.Sandbox {
 		t.Fatalf("environment = %q", value.Environment())
 	}
-	if _, err := first(value.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err != nil {
+	if _, err := first(value.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err != nil {
 		t.Fatal(err)
 	}
 	if target != "https://sandbox.inflowpay.ai/v1/services/search" {
@@ -140,7 +140,7 @@ func TestSearchPagesFiltersUnknownProtocols(t *testing.T) {
 	transport := roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return response(http.StatusOK, `{"items":[`+result+`]}`, nil), nil
 	})
-	page, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	page, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ func TestSearchPagesReportsMalformedKnownProtocol(t *testing.T) {
 	transport := roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return response(http.StatusOK, `{"items":[`+result+`,`+serviceResult+`]}`, nil), nil
 	})
-	page, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	page, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestSearchServicesFollowsOpaqueContinuationWithGet(t *testing.T) {
 		return response(http.StatusOK, `{"items":[`+serviceResult+`],"next":"/v1/services/search?cursor=opaque"}`, nil), nil
 	})
 	var origins []string
-	for service, err := range client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}) {
+	for service, err := range client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Items {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -229,7 +229,7 @@ func TestSearchRejectsCrossOriginContinuation(t *testing.T) {
 		return response(http.StatusOK, `{"items":[],"next":"https://other.example/search"}`, nil), nil
 	})
 	var received error
-	for _, err := range client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}) {
+	for _, err := range client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses {
 		if err != nil {
 			received = err
 		}
@@ -246,7 +246,7 @@ func TestRequestErrorPreservesResponseDetails(t *testing.T) {
 	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return response(http.StatusServiceUnavailable, `{"title":"Unavailable","detail":"try again shortly"}`, headers), nil
 	})
-	_, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	var requestError *directory.RequestError
 	if !errors.As(err, &requestError) {
 		t.Fatalf("error = %v", err)
@@ -264,7 +264,7 @@ func TestSearchStopsReadingOversizedResponse(t *testing.T) {
 	transport := roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return response(http.StatusOK, strings.Repeat("x", 524_289), nil), nil
 	})
-	_, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err == nil || !strings.Contains(err.Error(), "byte limit") {
 		t.Fatalf("error = %v", err)
 	}
@@ -282,7 +282,7 @@ func TestRedirectPolicy(t *testing.T) {
 			}
 			return response(http.StatusOK, `{"items":[]}`, nil), nil
 		})
-		if _, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err != nil {
+		if _, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err != nil {
 			t.Fatal(err)
 		}
 		if strings.Join(methods, ",") != "POST,GET" {
@@ -296,7 +296,7 @@ func TestRedirectPolicy(t *testing.T) {
 			headers.Set("Location", "https://other.example/search")
 			return response(http.StatusTemporaryRedirect, "", headers), nil
 		})
-		_, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err == nil || !strings.Contains(err.Error(), "changed origin") {
 			t.Fatalf("error = %v", err)
 		}
@@ -308,7 +308,7 @@ func TestRedirectPolicy(t *testing.T) {
 			headers.Set("Location", "/again")
 			return response(http.StatusTemporaryRedirect, "", headers), nil
 		})
-		_, err := first(client(t, transport, directory.Production).SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err == nil || !strings.Contains(err.Error(), "redirect limit") {
 			t.Fatalf("error = %v", err)
 		}
@@ -337,7 +337,7 @@ func TestSearchValidation(t *testing.T) {
 				t.Fatal("transport called for invalid input")
 				return nil, nil
 			})
-			_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), test.request, test.options))
+			_, err := first(client(t, transport, directory.Production).SearchServices(t.Context(), test.request, test.options).Items)
 			if err == nil {
 				t.Fatal("expected validation error")
 			}
@@ -352,7 +352,7 @@ func TestSearchPreservesAdditiveMembersAndHonorsItemLimit(t *testing.T) {
 		return response(http.StatusOK, `{"trace":"abc","items":[`+firstService+`,`+secondService+`]}`, nil), nil
 	})
 	var services []directory.Service
-	for service, err := range client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxItems: 1}) {
+	for service, err := range client(t, transport, directory.Production).SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxItems: 1}).Items {
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -370,7 +370,7 @@ func TestSearchUsesContext(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
-	_, err := first(client(t, transport, directory.Production).SearchPages(ctx, directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := first(client(t, transport, directory.Production).SearchServices(ctx, directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("error = %v", err)
 	}

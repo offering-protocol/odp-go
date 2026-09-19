@@ -21,7 +21,7 @@ func TestUnreadableBodiesSurfaceTheirError(t *testing.T) {
 		headers.Set("Content-Type", "application/json")
 		return &http.Response{Body: failingBody{}, Header: headers, StatusCode: http.StatusOK}, nil
 	})
-	_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err == nil || !strings.Contains(err.Error(), "connection reset") {
 		t.Fatalf("error = %v", err)
 	}
@@ -33,7 +33,7 @@ func TestFailureMessagesStayWithinTheirBudget(t *testing.T) {
 		return withHeaders(http.StatusBadRequest, `{"detail":"`+strings.Repeat("d", 4_096)+`"}`,
 			map[string]string{"Content-Type": "application/problem+json"}), nil
 	})
-	_, err := collectPages(long.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err := collectPages(long.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err == nil {
 		t.Fatal("oversized detail accepted")
 	}
@@ -51,7 +51,7 @@ func TestFailureMessagesStayWithinTheirBudget(t *testing.T) {
 		return withHeaders(http.StatusServiceUnavailable, `{"detail":"`+strings.Repeat("h", 32_768)+`"}`,
 			map[string]string{"Content-Type": "application/json"}), nil
 	})
-	_, err = collectPages(huge.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+	_, err = collectPages(huge.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 	if err == nil || err.Error() != "Directory request failed with HTTP 503" {
 		t.Fatalf("message = %v", err)
 	}
@@ -79,7 +79,7 @@ func TestContinuationsAreCheckedBeforeTheyAreFollowed(t *testing.T) {
 			}
 			return response(http.StatusOK, `{"items":[],"next":"`+test.next+`"}`, nil), nil
 		})
-		_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		switch {
 		case test.wantErr == "" && err != nil:
 			t.Errorf("%s: %v", name, err)
@@ -99,7 +99,7 @@ func TestOptionalServiceMembersAreCheckedForTheirType(t *testing.T) {
 		"website_url":       `"website_url":7`,
 	} {
 		client := serve(t, always(page(recordWith(members))))
-		pages, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		pages, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -126,7 +126,7 @@ func TestFacetShapesAreRejectedMemberByMember(t *testing.T) {
 		"an option naming no scheme":  `"payment_options":[{"value":{"name":"tap","option":"inflow"},"count":1}]`,
 	} {
 		client := serve(t, always(`{"items":[],"facets":{`+facets+`}}`))
-		if _, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err == nil {
+		if _, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err == nil {
 			t.Errorf("%s accepted", name)
 		}
 	}

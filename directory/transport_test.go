@@ -57,7 +57,7 @@ func TestResponsesAreRejectedOnTheirWireShape(t *testing.T) {
 	}
 	for name, test := range cases {
 		client := serve(t, func(*http.Request) (*http.Response, error) { return test.build(), nil })
-		_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err == nil || !strings.Contains(err.Error(), test.wantErr) {
 			t.Errorf("%s: error = %v, want %q", name, err, test.wantErr)
 		}
@@ -89,7 +89,7 @@ func TestRedirectsRewriteTheMethodTheirStatusRequires(t *testing.T) {
 			}
 			return response(http.StatusOK, `{"items":[]}`, nil), nil
 		})
-		if _, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{Query: "gpu"}, directory.IterationOptions{})); err != nil {
+		if _, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{Query: "gpu"}, directory.IterationOptions{}).Responses); err != nil {
 			t.Fatalf("status %d: %v", test.status, err)
 		}
 		if followed != test.want {
@@ -121,7 +121,7 @@ func TestRedirectsAreBoundedAndOriginLocked(t *testing.T) {
 			}
 			return withHeaders(http.StatusFound, "", values), nil
 		})
-		_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}))
+		_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses)
 		if err == nil || !strings.Contains(err.Error(), test.wantErr) {
 			t.Errorf("%s: error = %v, want %q", name, err, test.wantErr)
 		}
@@ -135,7 +135,7 @@ func TestRedirectsAreBoundedAndOriginLocked(t *testing.T) {
 		}
 		return response(http.StatusOK, `{"items":[]}`, nil), nil
 	})
-	if _, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{})); err != nil {
+	if _, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses); err != nil {
 		t.Fatalf("five redirects: %v", err)
 	}
 	if hops != 6 {
@@ -151,7 +151,7 @@ func TestRunawayTraversalIsReportedRatherThanTruncated(t *testing.T) {
 	})
 	// A directory that never stops offering a continuation is a runaway, not an exhausted search,
 	// so the guard reports rather than ending the sequence as though the results ran out.
-	_, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 10_000}))
+	_, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 10_000}).Responses)
 	if err == nil || !strings.Contains(err.Error(), "traversal limit") {
 		t.Fatalf("error = %v after %d requests", err, requests)
 	}
@@ -166,7 +166,7 @@ func TestCallerPageBudgetEndsTheSequenceQuietly(t *testing.T) {
 		requests++
 		return response(http.StatusOK, fmt.Sprintf(`{"items":[],"next":"/v1/services/search?cursor=%d"}`, requests), nil), nil
 	})
-	pages, err := collectPages(client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 2}))
+	pages, err := collectPages(client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{MaxPages: 2}).Responses)
 	if err != nil || len(pages) != 2 || requests != 2 {
 		t.Fatalf("pages = %d, requests = %d, err = %v", len(pages), requests, err)
 	}
@@ -179,7 +179,7 @@ func TestCallersCanStopEarly(t *testing.T) {
 		return response(http.StatusOK, `{"items":[`+record+`],"next":"/v1/services/search?cursor=c"}`, nil), nil
 	})
 	count := 0
-	for range client.SearchPages(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}) {
+	for range client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Responses {
 		count++
 		break
 	}
@@ -187,7 +187,7 @@ func TestCallersCanStopEarly(t *testing.T) {
 		t.Fatalf("pages = %d, requests = %d", count, requests)
 	}
 	services := 0
-	for range client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}) {
+	for range client.SearchServices(t.Context(), directory.SearchRequest{}, directory.IterationOptions{}).Items {
 		services++
 		break
 	}

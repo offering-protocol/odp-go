@@ -109,9 +109,9 @@ children := odp.CollectionSearchRequest{ODPVersion: odp.Version, ParentID: odp.S
 
 ## Directory discovery
 
-Package `directory` searches candidate Services through the canonical production directory or its
-fixed sandbox environment. It validates cached Service summaries, follows opaque same-origin
-continuations, exposes structured facets, and provides keyword suggestions.
+Package `directory` searches indexed Services and Collections through the canonical production
+directory or its fixed sandbox environment. It validates results, follows opaque same-origin
+continuations when offered, exposes structured facets, and provides search suggestions.
 
 ```go
 directoryClient, err := directory.New(directory.Options{})
@@ -127,7 +127,7 @@ for candidate, err := range directoryClient.SearchServices(ctx, directory.Search
 			Options: []odp.PaymentOption{odp.PaymentOptionInflow, odp.PaymentOptionSolana},
 		}},
 	},
-}, directory.IterationOptions{MaxItems: 20}) {
+}, directory.IterationOptions{MaxItems: 20}).Items {
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,13 @@ for candidate, err := range directoryClient.SearchServices(ctx, directory.Search
 }
 ```
 
-See the [directory package guide](./directory/README.md) for page traversal, suggestions, and
+Use `Search` and `ContinueSearch` for mixed Service/Collection results, or `SearchServices` and
+`ContinueSearchServices` for Service-only discovery. Each returns independent `Items` and
+`Responses` iterators. `Suggest` returns matching target names; `SuggestServices` provides
+Service-only keyword suggestions. Mixed search is capped at 100 results without continuation;
+refine the query rather than assuming every match was returned.
+
+See the [directory package guide](./directory/README.md) for response traversal, migration, suggestions, and
 sandbox usage.
 
 ## Agent integration

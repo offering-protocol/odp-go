@@ -201,6 +201,11 @@ Agent processing. Recognized descriptors remain subject to current-version valid
 See the [runnable Agent example](../examples/odp-agent-discovery/README.md), which clearly labels and
 isolates its mock directory while querying live ODP Services.
 
+For discovery that includes submitted Collections, call the Directory client's `Search` and
+iterate its `Items`. A Collection result identifies its owning Service and remote Collection ID.
+Inspect that Service, then call `GetCollection` with the ID. `SearchOfferingsAcrossServices`
+continues to select Services only; it does not treat Collections as separate Services.
+
 ## Related documentation
 
 - [Directory integration](../directory/README.md)

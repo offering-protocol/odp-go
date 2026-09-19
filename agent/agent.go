@@ -44,7 +44,7 @@ func (agent *Agent) searchOfferingsAcrossServices(ctx context.Context, request F
 			return
 		}
 		services := make([]directory.Service, 0, maxServices)
-		for service, err := range agent.directory.SearchServices(ctx, request.Services, directory.IterationOptions{MaxItems: maxServices}) {
+		for service, err := range agent.directory.SearchServices(ctx, request.Services, directory.IterationOptions{MaxItems: maxServices}).Items {
 			if err != nil {
 				yield(DiscoveryEvent{}, err)
 				return
