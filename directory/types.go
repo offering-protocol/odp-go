@@ -82,11 +82,18 @@ type Source struct {
 	X402Discovery bool
 }
 
-type ServiceReference struct {
+type serviceReference struct {
 	Additional    odp.AdditionalMembers
 	ServiceID     string
 	ServiceOrigin string
 	Name          string
+}
+
+type Publisher struct {
+	Additional  odp.AdditionalMembers
+	PublisherID string
+	Name        string
+	WebsiteURL  string
 }
 
 type CollectionSummary struct {
@@ -98,13 +105,13 @@ type CollectionSummary struct {
 
 // Result retains unknown resource types in Raw without interpreting them as Services.
 type Result struct {
-	Additional       odp.AdditionalMembers
-	Type             string
-	Service          *IndexedService
-	Collection       *CollectionSummary
-	AvailableThrough *ServiceReference
-	IndexedAt        time.Time
-	Raw              json.RawMessage
+	Additional odp.AdditionalMembers
+	Type       string
+	Service    *IndexedService
+	Collection *CollectionSummary
+	Publisher  *Publisher
+	IndexedAt  time.Time
+	Raw        json.RawMessage
 }
 
 type IterationOptions struct {
