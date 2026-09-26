@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"iter"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -122,13 +123,13 @@ func parseResult(data []byte) (Result, error) {
 	}
 	result := Result{Type: kind, Service: &service, IndexedAt: indexedAt}
 	if kind == "service" {
-		result.Additional = cloneAdditional(object, "type", "service", "indexed_at", "available_through")
-		if raw, present := object["available_through"]; present {
-			reference, err := parseServiceReference(raw)
+		result.Additional = cloneAdditional(object, "type", "service", "indexed_at", "publisher")
+		if raw, present := object["publisher"]; present && string(raw) != "null" {
+			reference, err := parsePublisher(raw)
 			if err != nil {
 				return Result{}, err
 			}
-			result.AvailableThrough = &reference
+			result.Publisher = &reference
 		}
 		return result, nil
 	}
@@ -155,29 +156,53 @@ func parseResult(data []byte) (Result, error) {
 	return result, nil
 }
 
-func parseServiceReference(data []byte) (ServiceReference, error) {
+func parsePublisher(data []byte) (Publisher, error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(data, &object); err != nil {
-		return ServiceReference{}, err
+		return Publisher{}, err
+	}
+	id, err := requiredText(object["publisher_id"], "publisher_id", 1, 128)
+	if err != nil {
+		return Publisher{}, err
+	}
+	name, err := requiredText(object["name"], "name", 1, 128)
+	if err != nil {
+		return Publisher{}, err
+	}
+	website, err := requiredText(object["website_url"], "website_url", 1, 512)
+	if err != nil {
+		return Publisher{}, err
+	}
+	parsed, err := url.Parse(website)
+	if err != nil || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil {
+		return Publisher{}, errors.New("Publisher website must be an HTTPS URL without credentials")
+	}
+	return Publisher{PublisherID: id, Name: name, WebsiteURL: website, Additional: cloneAdditional(object, "publisher_id", "name", "website_url")}, nil
+}
+
+func parseServiceReference(data []byte) (serviceReference, error) {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return serviceReference{}, err
 	}
 	id, err := requiredText(object["service_id"], "service_id", 1, 128)
 	if err != nil {
-		return ServiceReference{}, err
+		return serviceReference{}, err
 	}
 	origin, err := requiredText(object["service_origin"], "service_origin", 1, 2048)
 	if err != nil {
-		return ServiceReference{}, err
+		return serviceReference{}, err
 	}
 	canonical, err := odp.DeriveServiceOrigin(origin)
 	if err != nil || canonical != origin || !publicHTTPSOrigin(origin) {
-		return ServiceReference{}, errors.New("Attribution origin must be a canonical public HTTPS origin")
+		return serviceReference{}, errors.New("Service origin must be a canonical public HTTPS origin")
 	}
 	var name string
 	if raw, present := object["name"]; present {
 		name, err = requiredText(raw, "name", 1, 128)
 		if err != nil {
-			return ServiceReference{}, err
+			return serviceReference{}, err
 		}
 	}
-	return ServiceReference{ServiceID: id, ServiceOrigin: origin, Name: name, Additional: cloneAdditional(object, "service_id", "service_origin", "name")}, nil
+	return serviceReference{ServiceID: id, ServiceOrigin: origin, Name: name, Additional: cloneAdditional(object, "service_id", "service_origin", "name")}, nil
 }

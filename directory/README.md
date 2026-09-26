@@ -62,7 +62,9 @@ Mixed search requires the Directory's source-aware response format. A missing or
 is reported as a record issue; the client does not infer a document URL from the API origin.
 
 `Result.IndexedAt` reports Collection freshness; `Result.Service.IndexedAt` reports its parent's
-freshness. A Service may have `AvailableThrough` platform attribution. A Collection's attribution
+freshness. A Service may have `Publisher` attribution with `PublisherID`, `Name`, and `WebsiteURL`.
+The website is a display link, not a discovery or execution target. Additional response members
+are retained; publisher attribution may be absent or null. A Collection's attribution
 is its owning `Service`.
 
 Unknown types retain the wire type in `Type` and complete JSON in `Raw`; their `Service` and

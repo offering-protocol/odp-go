@@ -37,7 +37,7 @@ func mixedBody(t *testing.T, items ...any) string {
 
 func TestMixedSearchSequence(t *testing.T) {
 	service := mixedResult("service")
-	service["available_through"] = map[string]any{"service_id": "platform", "service_origin": "https://platform.example", "name": "Platform", "extra": true}
+	service["publisher"] = map[string]any{"publisher_id": "platform", "website_url": "https://platform.example/catalog", "name": "Platform", "extra": true}
 	service["extra"] = "retained"
 	collection := mixedResult("collection")
 	collection["collection"].(map[string]any)["extra"] = true
@@ -71,7 +71,7 @@ func TestMixedSearchSequence(t *testing.T) {
 		if err != nil || len(result.Items) != 3 || len(result.Issues) != 1 || result.Issues[0].Index != 3 || result.Issues[0].Scope != directory.IssueResult {
 			t.Fatalf("result = %#v, %v", result, err)
 		}
-		if result.Items[0].AvailableThrough.Name != "Platform" || string(result.Items[0].Additional["extra"]) != `"retained"` || string(result.Items[0].AvailableThrough.Additional["extra"]) != "true" {
+		if result.Items[0].Publisher.Name != "Platform" || string(result.Items[0].Additional["extra"]) != `"retained"` || string(result.Items[0].Publisher.Additional["extra"]) != "true" {
 			t.Fatalf("Service attribution or additional fields = %#v", result.Items[0])
 		}
 		if result.Items[1].Collection.ID != "Weather" || result.Items[1].Service.ServiceID == "" || result.Items[1].IndexedAt.Equal(result.Items[1].Service.IndexedAt) || string(result.Items[1].Collection.Additional["extra"]) != "true" {
@@ -121,9 +121,9 @@ func TestMixedSearchRejectsMalformedKnownEntries(t *testing.T) {
 			}
 		}
 	}
-	for _, reference := range []any{nil, false, map[string]any{}, map[string]any{"service_id": "x"}, map[string]any{"service_id": "x", "service_origin": "http://localhost"}, map[string]any{"service_id": "x", "service_origin": "https://platform.example", "name": nil}} {
+	for _, reference := range []any{false, map[string]any{}, map[string]any{"publisher_id": "x"}, map[string]any{"publisher_id": "x", "name": "Platform"}, map[string]any{"publisher_id": "x", "name": "Platform", "website_url": "http://localhost"}, map[string]any{"publisher_id": "x", "name": "Platform", "website_url": "https://user:secret@platform.example"}, map[string]any{"publisher_id": "x", "name": "Platform", "website_url": "://invalid"}} {
 		item := mixedResult("service")
-		item["available_through"] = reference
+		item["publisher"] = reference
 		value := client(t, func(*http.Request) (*http.Response, error) {
 			return response(200, mixedBody(t, item), nil), nil
 		}, directory.Production)
@@ -144,7 +144,9 @@ func TestMixedSearchOptionalFields(t *testing.T) {
 			item["collection"].(map[string]any)["description"] = description
 		}
 		service := mixedResult("service")
-		service["available_through"] = map[string]any{"service_id": "x", "service_origin": "https://platform.example"}
+		service["publisher"] = nil
+		service["available_through"] = map[string]any{"service_id": "legacy", "service_origin": "https://legacy.example"}
+		service["future_metadata"] = map[string]any{"arbitrary": true}
 		value := client(t, func(*http.Request) (*http.Response, error) {
 			return response(200, mixedBody(t, item, service), nil), nil
 		}, directory.Production)
