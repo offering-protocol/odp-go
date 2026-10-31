@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	github.com/pb33f/libopenapi v0.41.6
+	github.com/pb33f/libopenapi v0.41.8
 	golang.org/x/net v0.61.0
 )
 
